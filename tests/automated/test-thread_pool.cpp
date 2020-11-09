@@ -20,7 +20,7 @@ TEST_CASE("thread pool default operation", "[thread_pool]")
         futures.emplace_back(
           i, thr.launch_task(
                   [](double c) {
-                      this_thread::sleep_for(chrono::milliseconds(rand() % 313));
+                      this_thread::sleep_for(chrono::milliseconds(rand() % 110));
                       return c * c;
                   },
                   i)

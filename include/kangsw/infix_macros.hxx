@@ -22,7 +22,7 @@
     }                                                                                                    \
                                                                                                          \
     template <typename Lhs_, typename Rhs_>                                                              \
-    decltype(auto) operator##DIVIDER(kangsw::infix::infix_right_t__<NAME##_t, Lhs_> op, Rhs_ const& rhs) \
+    decltype(auto) operator##DIVIDER(kangsw::infix::infix_right_t__<NAME##_t, Lhs_> const& op, Rhs_ const& rhs) \
     {                                                                                                    \
         return NAME##_t{}(*op.l_, rhs);                                                                  \
     }

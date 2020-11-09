@@ -13,7 +13,7 @@ struct infix_right_t__ {
 };
 
 template <typename Op_, typename Lhs_>
-decltype(auto) operator/(Lhs_ const& lhs, base<Op_> const& op)
+decltype(auto) operator<<(Lhs_ const& lhs, base<Op_> const& op)
 {
     infix_right_t__<Op_, Lhs_> r;
     r.l_ = &lhs;
@@ -23,7 +23,7 @@ decltype(auto) operator/(Lhs_ const& lhs, base<Op_> const& op)
 
 template <typename Op_, typename Lhs_, typename Rhs_>
 // requires Op_::is_invocable_v<Op_, Lhs_, Rhs_>
-decltype(auto) operator/(infix_right_t__<Op_, Lhs_> op, Rhs_ const& rhs)
+decltype(auto) operator>>(infix_right_t__<Op_, Lhs_> const& op, Rhs_ const& rhs)
 {
     return Op_{}(*op.l_, rhs);
 }

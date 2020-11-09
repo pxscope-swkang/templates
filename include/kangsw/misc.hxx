@@ -7,10 +7,9 @@
 namespace kangsw {
 template <typename Ty_>
 // requires std::is_arithmetic_v<Ty_>&& std::is_integral_v<Ty_>
-class counter_base
-    : public std::iterator<std::random_access_iterator_tag, typename Ty_> {
+class counter_base {
 public:
-    using super = std::iterator<std::random_access_iterator_tag, typename Ty_>;
+    using difference_type = ptrdiff_t;
 
     counter_base()
         : count_(0)
@@ -29,13 +28,13 @@ public:
     }
 
 public:
-    friend counter_base operator+(counter_base c, typename super::difference_type n) { return counter_base(c.count_ + n); }
-    friend counter_base operator+(typename super::difference_type n, counter_base c) { return c + n; }
-    friend counter_base operator-(counter_base c, typename super::difference_type n) { return counter_base(c.count_ - n); }
-    friend counter_base operator-(typename super::difference_type n, counter_base c) { return c - n; }
-    typename super::difference_type operator-(counter_base o) { return count_ - o.count_; }
-    counter_base& operator+=(typename super::difference_type n) { return count_ += n, *this; }
-    counter_base& operator-=(typename super::difference_type n) { return count_ -= n, *this; }
+    friend counter_base operator+(counter_base c, typename difference_type n) { return counter_base(c.count_ + n); }
+    friend counter_base operator+(typename difference_type n, counter_base c) { return c + n; }
+    friend counter_base operator-(counter_base c, typename difference_type n) { return counter_base(c.count_ - n); }
+    friend counter_base operator-(typename difference_type n, counter_base c) { return c - n; }
+    typename difference_type operator-(counter_base o) { return count_ - o.count_; }
+    counter_base& operator+=(typename difference_type n) { return count_ += n, *this; }
+    counter_base& operator-=(typename difference_type n) { return count_ -= n, *this; }
     counter_base& operator++() { return ++count_, *this; }
     counter_base operator++(int) { return ++count_, counter_base(count_ - 1); }
     counter_base& operator--() { return --count_, *this; }
@@ -140,4 +139,4 @@ std::string format_string(char const* fmt, Args_&&... args)
     return s;
 }
 
-} // namespace templates
+} // namespace kangsw

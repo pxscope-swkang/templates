@@ -10,9 +10,9 @@
 #include <type_traits>
 
 namespace kangsw {
-class timeout_exception : public std::exception {
+class thread_pool_launch_timeout_exception : public std::exception {
 public:
-    explicit timeout_exception(char const* _Message)
+    explicit thread_pool_launch_timeout_exception(char const* _Message)
         : exception(_Message)
     {
     }
@@ -23,21 +23,18 @@ class future_proxy {
     friend class thread_pool;
 
 public:
-    std::future<Ty_> get_future()
-    {
-        auto future = promise_->get_future();
-        promise_.reset();
-        return std::move(future);
-    }
+    Ty_ get() { return future_.get(); }
+    std::shared_future<Ty_> const& view() { return future_; }
 
     future_proxy() = default;
-    future_proxy(const future_proxy& other) = delete;
+    future_proxy(const future_proxy& other) = default;
     future_proxy(future_proxy&& other) noexcept = default;
-    future_proxy& operator=(const future_proxy& other) = delete;
+    future_proxy& operator=(const future_proxy& other) = default;
     future_proxy& operator=(future_proxy&& other) noexcept = default;
 
 private:
     std::shared_ptr<std::promise<Ty_>> promise_;
+    std::shared_future<Ty_> future_;
 };
 
 template <>
@@ -150,17 +147,23 @@ thread_pool::_package_task(thread_pool::task_function& event, Fn_&& f, Args_... 
     }
     else {
         result.promise_ = std::make_shared<std::promise<callable_return_type>>();
-        event = [promise = result.promise_,
+        result.future_ = result.promise_->get_future().share();
+        event = [promise_ = (result.promise_),
                  fn_ = std::forward<Fn_>(f),
                  arg_tuple_ = std::make_tuple(std::forward<Args_>(args)...)]() mutable {
+            if (promise_.use_count() == 1) {
+                // if given promise was discarded, don't catch exceptions
+                promise_->set_value(std::apply(fn_, std::move(arg_tuple_)));
+                return;
+            }
             try {
-                promise->set_value(std::apply(fn_, std::move(arg_tuple_)));
+                promise_->set_value(std::apply(fn_, std::move(arg_tuple_)));
             } catch (std::exception&) {
                 do {
                     try {
                         // if future was already retrieved, below statement will throw.
                         // then do nothing, to mandate error handling to caller
-                        auto v = promise->get_future();
+                        auto v = promise_->get_future();
                     } catch (std::exception&) {
                         break;
                     }
@@ -172,7 +175,7 @@ thread_pool::_package_task(thread_pool::task_function& event, Fn_&& f, Args_... 
 
                 // if above statement did not thrown, it means the future was correctly
                 //retrieved when it was launched.
-                promise->set_exception(std::current_exception());
+                promise_->set_exception(std::current_exception());
             }
         };
     }
@@ -192,22 +195,20 @@ decltype(auto) thread_pool::launch_task(Fn_&& f, Args_... args)
 
     return_type result;
 
-    using std::chrono::system_clock;
-
-    _check_reserve_worker(1);
-
     task_t task;
     result = _package_task<Fn_, Args_...>(task.event, std::forward<Fn_>(f), std::forward<Args_>(args)...);
 
     latest_event_ = clock::now();
-    for (auto elapse_begin = system_clock::now();
-         !tasks_.try_push(std::move(task));
-         std::this_thread::yield()) {
-        if (system_clock::now() - elapse_begin > launch_timeout_ms) {
-            throw timeout_exception{""};
+    for (
+      auto elapse_begin = clock::now();
+      !tasks_.try_push(std::move(task));
+      std::this_thread::yield()) {
+        if (clock::now() - elapse_begin > launch_timeout_ms) {
+            throw thread_pool_launch_timeout_exception{""};
         }
     }
 
+    _check_reserve_worker(1);
     event_wait_.notify_one();
     return result;
 }
@@ -348,24 +349,25 @@ public:
                     continue;
                 }
 
-                std::unique_lock lock(timer_lock_);
-                while (!pending_timers_.empty()
-                       && clock::now() > pending_timers_.begin()->first) {
-                    // since 'pending_timers_' is always sorted by ascending order,
-                    //frontmost element is always the first pending timer node.
-                    launch_task(std::move(pending_timers_.begin()->second));
-                    pending_timers_.erase(pending_timers_.begin());
-                }
+                if (std::unique_lock lock(timer_lock_); lock) {
+                    while (!pending_timers_.empty()
+                           && clock::now() > pending_timers_.begin()->first) {
+                        // since 'pending_timers_' is always sorted by ascending order,
+                        //frontmost element is always the first pending timer node.
+                        launch_task(std::move(pending_timers_.begin()->second));
+                        pending_timers_.erase(pending_timers_.begin());
+                    }
 
-                // checks 'pending_timer_' during the lock is alive.
-                if (pending_timers_.empty()) {
-                    nearlest_awake_.store(clock::time_point::max(), std::memory_order_relaxed);
-                }
-                else {
-                    nearlest_awake_.store(pending_timers_.begin()->first, std::memory_order_relaxed);
-                }
+                    // checks 'pending_timer_' during the lock is alive.
+                    if (pending_timers_.empty()) {
+                        nearlest_awake_.store(clock::time_point::max(), std::memory_order_relaxed);
+                    }
+                    else {
+                        nearlest_awake_.store(pending_timers_.begin()->first, std::memory_order_relaxed);
+                    }
 
-                num_waiting_timer_.store(pending_timers_.size(), std::memory_order_relaxed);
+                    num_waiting_timer_.store(pending_timers_.size(), std::memory_order_relaxed);
+                }
             }
         }};
     }
@@ -379,20 +381,26 @@ public:
 
 public:
     template <typename Fn_, typename... Args_>
-    decltype(auto) launch_timer(std::chrono::microseconds delay, Fn_&& f, Args_... args)
+    decltype(auto) launch_timer(clock::time_point issue, Fn_&& f, Args_... args)
     {
         task_function event;
         auto result = _package_task(event, std::forward<Fn_>(f), std::forward<Args_>(args)...);
 
-        std::unique_lock lock(timer_lock_);
-        auto issue = clock::now() + delay;
+        if (std::unique_lock lock(timer_lock_); lock) {
+            pending_timers_.emplace(issue, std::move(event));
 
-        nearlest_awake_.store(issue);
-        pending_timers_.try_emplace(issue, std::move(event));
-        timer_thread_wait_.notify_one();
+            nearlest_awake_.store(pending_timers_.begin()->first);
+            num_waiting_timer_.store(pending_timers_.size(), std::memory_order_relaxed);
 
-        num_waiting_timer_.store(pending_timers_.size(), std::memory_order_relaxed);
+            timer_thread_wait_.notify_one();
+        }
         return result;
+    }
+
+    template <typename Fn_, typename... Args_>
+    decltype(auto) launch_timer(std::chrono::microseconds delay, Fn_&& f, Args_... args)
+    {
+        return launch_timer(clock::now() + delay, std::forward<Fn_>(f), std::forward<Args_>(args)...);
     }
 
 public:
@@ -404,7 +412,7 @@ private:
     std::atomic_bool pending_dispose_;
 
     std::atomic<clock::time_point> nearlest_awake_ = clock::time_point::max();
-    std::map<clock::time_point, std::function<void()>> pending_timers_;
+    std::multimap<clock::time_point, std::function<void()>> pending_timers_;
     std::condition_variable timer_thread_wait_;
     std::atomic_size_t num_waiting_timer_;
     mutable std::mutex timer_lock_;

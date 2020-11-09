@@ -10,8 +10,9 @@ using namespace std;
 
 TEST_CASE("thread pool default operation", "[thread_pool]")
 {
-    for (int ITER = 50; --ITER;) {
-        printf("THREAD POOL TEST [%4d] --- \n", ITER);
+    printf("<< THREAD POOL TEST >>");
+    for (int ITER = 1; ITER; ITER--) {
+        printf("\n [%4d] -------------------------------- \n", ITER);
         enum { num_cases = 1024 };
 
         timer_thread_pool thr{1024, 1};
@@ -78,6 +79,6 @@ TEST_CASE("thread pool default operation", "[thread_pool]")
         CHECK(thr.num_workers() != 2);
         REQUIRE(num_error == 0);
 
-        printf("\n");
+        cout << "\033F";
     }
 }

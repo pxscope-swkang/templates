@@ -10,7 +10,6 @@ namespace LOCK_FREE__ {
 template <typename Ty_>
 class safe_queue {
 public:
-    using difference_type = std::ptrdiff_t;
     using element_type = Ty_;
 
 public:

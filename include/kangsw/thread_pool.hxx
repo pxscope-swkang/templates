@@ -3,6 +3,7 @@
 #include <condition_variable>
 #include <functional>
 #include <future>
+#include <map>
 #include <mutex>
 #include <optional>
 #include <thread>
@@ -46,11 +47,16 @@ class future_proxy<void> {
 class thread_pool {
 public:
     using clock = std::chrono::system_clock;
+    using task_function = std::function<void()>;
 
 public:
     thread_pool(size_t task_queue_cap_ = 1024, size_t num_workers = std::thread::hardware_concurrency(), size_t concrete_worker_count_limit = 1024) noexcept;
-
     ~thread_pool();
+
+    thread_pool(const thread_pool& other) = delete;
+    thread_pool(thread_pool&& other) noexcept = delete;
+    thread_pool& operator=(const thread_pool& other) = delete;
+    thread_pool& operator=(thread_pool&& other) noexcept = delete;
 
 public:
     void resize_worker_pool(size_t new_size);
@@ -65,10 +71,15 @@ public:
     template <typename Fn_, typename... Args_>
     decltype(auto) launch_task(Fn_&& f, Args_... args);
 
+protected:
+    template <typename Fn_, typename... Args_>
+    static decltype(auto) _package_task(
+      thread_pool::task_function& event, Fn_&& f, Args_... args);
+
 private:
-    bool try_add_worker__();
-    void pop_workers__(size_t count);
-    void check_reserve_worker__(size_t threshold);
+    bool _try_add_worker();
+    void _pop_workers(size_t count);
+    void _check_reserve_worker(size_t threshold);
 
 public:
     std::chrono::milliseconds launch_timeout_ms{1000};
@@ -98,7 +109,7 @@ private:
     };
 
     struct task_t {
-        std::function<void()> event;
+        task_function event;
     };
 
 private:
@@ -118,16 +129,15 @@ private:
     std::atomic<int64_t> average_wait_;
 };
 
-template <typename Fn_, typename... Args_>
-decltype(auto) thread_pool::launch_task(Fn_&& f, Args_... args)
+template <typename Fn_, typename... Args_> decltype(auto)
+thread_pool::_package_task(thread_pool::task_function& event, Fn_&& f, Args_... args)
 {
     using callable_return_type = std::invoke_result_t<Fn_, Args_...>;
     using return_type = future_proxy<callable_return_type>;
     using returns_void = std::is_same<callable_return_type, void>;
     using promise_ptr = std::shared_ptr<std::promise<callable_return_type>>;
-
     return_type result;
-    std::function<void()> event;
+
     if constexpr (returns_void::value) {
         event = [fn_ = std::forward<Fn_>(f),
                  arg_tuple_ = std::make_tuple(std::forward<Args_>(args)...)]() mutable {
@@ -167,21 +177,35 @@ decltype(auto) thread_pool::launch_task(Fn_&& f, Args_... args)
         };
     }
 
-    using std::chrono::system_clock;
-    auto elapse_begin = system_clock::now();
+    return result;
+}
 
-    check_reserve_worker__(1);
+template <typename Fn_, typename... Args_>
+decltype(auto) thread_pool::launch_task(Fn_&& f, Args_... args)
+{
+    static_assert(std::is_invocable_v<Fn_, Args_...>);
+
+    using callable_return_type = std::invoke_result_t<Fn_, Args_...>;
+    using return_type = future_proxy<callable_return_type>;
+    using returns_void = std::is_same<callable_return_type, void>;
+    using promise_ptr = std::shared_ptr<std::promise<callable_return_type>>;
+
+    return_type result;
+
+    using std::chrono::system_clock;
+
+    _check_reserve_worker(1);
 
     task_t task;
-    task.event = std::move(event);
-    latest_event_ = clock::now();
+    result = _package_task<Fn_, Args_...>(task.event, std::forward<Fn_>(f), std::forward<Args_>(args)...);
 
-    while (!tasks_.try_push(std::move(task))) {
+    latest_event_ = clock::now();
+    for (auto elapse_begin = system_clock::now();
+         !tasks_.try_push(std::move(task));
+         std::this_thread::yield()) {
         if (system_clock::now() - elapse_begin > launch_timeout_ms) {
             throw timeout_exception{""};
         }
-
-        std::this_thread::yield();
     }
 
     event_wait_.notify_one();
@@ -197,7 +221,7 @@ inline thread_pool::thread_pool(size_t task_queue_cap_, size_t num_workers, size
 
 inline thread_pool::~thread_pool()
 {
-    pop_workers__(workers_.size());
+    _pop_workers(workers_.size());
 }
 
 inline void thread_pool::resize_worker_pool(size_t new_size)
@@ -210,11 +234,11 @@ inline void thread_pool::resize_worker_pool(size_t new_size)
     std::lock_guard<std::mutex> lock(worker_lock_);
     if (new_size > workers_.size()) {
         while (new_size != workers_.size()) {
-            try_add_worker__();
+            _try_add_worker();
         }
     }
     else if (new_size < workers_.size()) {
-        pop_workers__(workers_.size() - new_size);
+        _pop_workers(workers_.size() - new_size);
     }
 }
 
@@ -228,11 +252,11 @@ inline void thread_pool::num_max_workers(size_t value)
     num_max_workers_ = value;
 
     if (value < workers_.size()) {
-        pop_workers__(workers_.size() - value);
+        _pop_workers(workers_.size() - value);
     }
 }
 
-inline bool thread_pool::try_add_worker__()
+inline bool thread_pool::_try_add_worker()
 {
     if (workers_.size() >= num_max_workers_) {
         return false;
@@ -254,7 +278,7 @@ inline bool thread_pool::try_add_worker__()
                     average_wait_.fetch_add(diff);
                 }
 
-                check_reserve_worker__(1);
+                _check_reserve_worker(1);
                 latest_active_ = now;
                 latest_event_ = now;
                 num_working_workers_.fetch_add(1);
@@ -277,7 +301,7 @@ inline bool thread_pool::try_add_worker__()
     return true;
 }
 
-inline void thread_pool::pop_workers__(size_t count)
+inline void thread_pool::_pop_workers(size_t count)
 {
     auto const begin = workers_.end() - count;
     auto const end = workers_.end();
@@ -294,7 +318,7 @@ inline void thread_pool::pop_workers__(size_t count)
     num_workers_cached_ = workers_.size();
 }
 
-inline void thread_pool::check_reserve_worker__(size_t threshold)
+inline void thread_pool::_check_reserve_worker(size_t threshold)
 {
     if ( // reserve workers if required.
       num_available_workers() <= threshold
@@ -303,4 +327,86 @@ inline void thread_pool::check_reserve_worker__(size_t threshold)
         resize_worker_pool((num_workers() & ~1) + 2);
     }
 }
-} // namespace templates
+
+// timer thread pool
+class timer_thread_pool : public thread_pool {
+public:
+    timer_thread_pool(
+      size_t task_queue_cap_ = 1024,
+      size_t num_workers = std::thread::hardware_concurrency(),
+      size_t concrete_worker_count_limit = -1)
+        : thread_pool(task_queue_cap_, num_workers, concrete_worker_count_limit)
+    {
+        timer_thread_ = std::thread{[this]() {
+            while (!pending_dispose_.load()) {
+                if (std::unique_lock lock{timer_lock_}) {
+                    timer_thread_wait_.wait_until(lock, nearlest_awake_.load());
+                }
+
+                if (nearlest_awake_.load() > clock::now()) {
+                    // Yet awake time is far ...
+                    continue;
+                }
+
+                std::unique_lock lock(timer_lock_);
+                while (!pending_timers_.empty()
+                       && clock::now() > pending_timers_.begin()->first) {
+                    // since 'pending_timers_' is always sorted by ascending order,
+                    //frontmost element is always the first pending timer node.
+                    launch_task(std::move(pending_timers_.begin()->second));
+                    pending_timers_.erase(pending_timers_.begin());
+                }
+
+                // checks 'pending_timer_' during the lock is alive.
+                if (pending_timers_.empty()) {
+                    nearlest_awake_.store(clock::time_point::max(), std::memory_order_relaxed);
+                }
+                else {
+                    nearlest_awake_.store(pending_timers_.begin()->first, std::memory_order_relaxed);
+                }
+
+                num_waiting_timer_.store(pending_timers_.size(), std::memory_order_relaxed);
+            }
+        }};
+    }
+
+    ~timer_thread_pool()
+    {
+        pending_dispose_.store(true);
+        timer_thread_wait_.notify_one();
+        timer_thread_.join();
+    }
+
+public:
+    template <typename Fn_, typename... Args_>
+    decltype(auto) launch_timer(std::chrono::microseconds delay, Fn_&& f, Args_... args)
+    {
+        task_function event;
+        auto result = _package_task(event, std::forward<Fn_>(f), std::forward<Args_>(args)...);
+
+        std::unique_lock lock(timer_lock_);
+        auto issue = clock::now() + delay;
+
+        nearlest_awake_.store(issue);
+        pending_timers_.try_emplace(issue, std::move(event));
+        timer_thread_wait_.notify_one();
+
+        num_waiting_timer_.store(pending_timers_.size(), std::memory_order_relaxed);
+        return result;
+    }
+
+public:
+    size_t num_total_waitings() const { return num_waiting_timer_.load() + num_pending_task(); }
+    size_t num_waiting_timer() const { return num_waiting_timer_.load(); }
+
+private:
+    std::thread timer_thread_;
+    std::atomic_bool pending_dispose_;
+
+    std::atomic<clock::time_point> nearlest_awake_ = clock::time_point::max();
+    std::map<clock::time_point, std::function<void()>> pending_timers_;
+    std::condition_variable timer_thread_wait_;
+    std::atomic_size_t num_waiting_timer_;
+    mutable std::mutex timer_lock_;
+};
+} // namespace kangsw

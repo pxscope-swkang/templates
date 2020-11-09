@@ -9,8 +9,13 @@ template <typename Ty_>
 // requires std::is_arithmetic_v<Ty_>&& std::is_integral_v<Ty_>
 class counter_base {
 public:
+    using iterator_category = std::random_access_iterator_tag;
     using difference_type = ptrdiff_t;
+    using value_type = Ty_;
+    using reference = Ty_&;
+    using pointer = Ty_*;
 
+public:
     counter_base()
         : count_(0)
     {
@@ -28,13 +33,13 @@ public:
     }
 
 public:
-    friend counter_base operator+(counter_base c, typename difference_type n) { return counter_base(c.count_ + n); }
-    friend counter_base operator+(typename difference_type n, counter_base c) { return c + n; }
-    friend counter_base operator-(counter_base c, typename difference_type n) { return counter_base(c.count_ - n); }
-    friend counter_base operator-(typename difference_type n, counter_base c) { return c - n; }
-    typename difference_type operator-(counter_base o) { return count_ - o.count_; }
-    counter_base& operator+=(typename difference_type n) { return count_ += n, *this; }
-    counter_base& operator-=(typename difference_type n) { return count_ -= n, *this; }
+    friend counter_base operator+(counter_base c, difference_type n) { return counter_base(c.count_ + n); }
+    friend counter_base operator+(difference_type n, counter_base c) { return c + n; }
+    friend counter_base operator-(counter_base c, difference_type n) { return counter_base(c.count_ - n); }
+    friend counter_base operator-(difference_type n, counter_base c) { return c - n; }
+    difference_type operator-(counter_base o) { return count_ - o.count_; }
+    counter_base& operator+=(difference_type n) { return count_ += n, *this; }
+    counter_base& operator-=(difference_type n) { return count_ -= n, *this; }
     counter_base& operator++() { return ++count_, *this; }
     counter_base operator++(int) { return ++count_, counter_base(count_ - 1); }
     counter_base& operator--() { return --count_, *this; }
@@ -110,7 +115,7 @@ template <typename Mutex_>
 decltype(auto) lock_read(Mutex_& m)
 {
     if constexpr (std::is_same<Mutex_, std::mutex>::value) {
-        return std::lock_guard<Mutex_>{m};
+        return std::unique_lock<Mutex_>{m};
     }
     else {
         return std::shared_lock<Mutex_>{m};
@@ -120,12 +125,7 @@ decltype(auto) lock_read(Mutex_& m)
 template <typename Mutex_>
 decltype(auto) lock_write(Mutex_& m)
 {
-    if constexpr (std::is_same<Mutex_, std::mutex>::value) {
-        return std::lock_guard<Mutex_>{m};
-    }
-    else {
-        return std::unique_lock<Mutex_>{m};
-    }
+    return std::unique_lock<Mutex_>{m};
 }
 
 template <typename... Args_>

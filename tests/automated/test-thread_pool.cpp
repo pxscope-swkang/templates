@@ -4,7 +4,7 @@
 #include <iostream>
 #include <kangsw/thread_pool.hxx>
 
-using namespace templates;
+using namespace kangsw;
 using namespace std;
 
 TEST_CASE("thread pool default operation", "[thread_pool]")

@@ -5,7 +5,7 @@
 #include <mutex>
 #include <shared_mutex>
 
-namespace templates {
+namespace kangsw {
 namespace LOCK_FREE__ {
 template <typename Ty_>
 class safe_queue {

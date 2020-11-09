@@ -6,7 +6,7 @@
 TEST_CASE("Queue basic operations", "[lock_free_queue]")
 {
     using std::string;
-    using templates::safe_queue;
+    using kangsw::safe_queue;
     size_t num_case = 128;
     safe_queue<string> queue{num_case};
 
@@ -38,7 +38,7 @@ TEST_CASE("Queue async operations", "[lock_free_queue]")
 {
     using std::thread;
     using std::vector;
-    using templates::safe_queue;
+    using kangsw::safe_queue;
     using namespace std::chrono_literals;
 
     const size_t num_thr_wr = 34;

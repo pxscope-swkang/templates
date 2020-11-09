@@ -1,13 +1,13 @@
 #pragma once
-#include <exception>
 #include <execution>
 #include <iterator>
 #include <mutex>
 #include <shared_mutex>
 
-namespace templates {
+namespace kangsw {
 template <typename Ty_>
-requires std::is_arithmetic_v<Ty_>&& std::is_integral_v<Ty_> class counter_base
+// requires std::is_arithmetic_v<Ty_>&& std::is_integral_v<Ty_>
+class counter_base
     : public std::iterator<std::random_access_iterator_tag, typename Ty_> {
 public:
     using super = std::iterator<std::random_access_iterator_tag, typename Ty_>;

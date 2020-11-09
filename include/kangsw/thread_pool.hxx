@@ -8,7 +8,7 @@
 #include <thread>
 #include <type_traits>
 
-namespace templates {
+namespace kangsw {
 class timeout_exception : public std::exception {
 public:
     explicit timeout_exception(char const* _Message)

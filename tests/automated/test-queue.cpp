@@ -5,27 +5,32 @@
 
 TEST_CASE("Queue basic operations", "[lock_free_queue]")
 {
-    using std::string;
     using kangsw::safe_queue;
+    using std::string;
     size_t num_case = 128;
     safe_queue<string> queue{num_case};
+    size_t num_fails = 0;
 
     REQUIRE(queue.empty());
 
-    for (int i = 0; i < num_case; ++i) {
+    for (size_t i = 0; i < num_case; ++i) {
         bool push_successful = queue.try_push("Hell, world!");
-        REQUIRE(push_successful);
-        REQUIRE(queue.size() == i + 1);
+        num_fails += !(push_successful);
+        num_fails += !(queue.size() == i + 1);
     }
 
+    REQUIRE(num_fails == 0);
     REQUIRE(queue.size() == num_case);
 
+    num_fails = 0;
     for (int i = 0; i < num_case; ++i) {
         string v;
         bool pop_successful = queue.try_pop(v);
-        REQUIRE(v == "Hell, world!");
-        REQUIRE(pop_successful);
+        num_fails += !(v == "Hell, world!");
+        num_fails += !(pop_successful);
     }
+
+    REQUIRE(num_fails == 0);
 
     {
         string v;
@@ -36,9 +41,9 @@ TEST_CASE("Queue basic operations", "[lock_free_queue]")
 
 TEST_CASE("Queue async operations", "[lock_free_queue]")
 {
+    using kangsw::safe_queue;
     using std::thread;
     using std::vector;
-    using kangsw::safe_queue;
     using namespace std::chrono_literals;
 
     const size_t num_thr_wr = 34;
@@ -89,7 +94,6 @@ TEST_CASE("Queue async operations", "[lock_free_queue]")
             }
         });
     }
-
 
     for (auto& thr : writers) { thr.join(); }
     for (auto& thr : readers) { thr.join(); }

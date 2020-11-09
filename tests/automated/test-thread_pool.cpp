@@ -10,7 +10,7 @@ using namespace std;
 TEST_CASE("thread pool default operation", "[thread_pool]")
 {
     printf("THREAD POOL TEST --- \n");
-    size_t num_cases = 1024;
+    size_t num_cases = 128;
 
     thread_pool thr{1024, 1};
     vector<pair<double, future<double>>> futures;
@@ -20,7 +20,7 @@ TEST_CASE("thread pool default operation", "[thread_pool]")
         futures.emplace_back(
           i, thr.launch_task(
                   [](double c) {
-                      this_thread::sleep_for(chrono::milliseconds(rand() % 128));
+                      this_thread::sleep_for(chrono::milliseconds(rand() % 313));
                       return c * c;
                   },
                   i)

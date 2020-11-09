@@ -5,8 +5,8 @@
 #include <future>
 #include <mutex>
 #include <optional>
-#include <type_traits>
 #include <thread>
+#include <type_traits>
 
 namespace templates {
 class timeout_exception : public std::exception {
@@ -37,6 +37,10 @@ public:
 
 private:
     std::shared_ptr<std::promise<Ty_>> promise_;
+};
+
+template <>
+class future_proxy<void> {
 };
 
 class thread_pool {
@@ -119,29 +123,28 @@ decltype(auto) thread_pool::launch_task(Fn_&& f, Args_... args)
 {
     using callable_return_type = std::invoke_result_t<Fn_, Args_...>;
     using return_type = future_proxy<callable_return_type>;
+    using returns_void = std::is_same<callable_return_type, void>;
+    using promise_ptr = std::shared_ptr<std::promise<callable_return_type>>;
 
-    auto promise = std::make_shared<std::promise<callable_return_type>>();
-    auto value_tuple = std::make_tuple(promise, f, std::tuple<Args_...>(args...));
-
-    struct executor {
-        decltype(value_tuple) arg;
-        void operator()()
-        {
-            auto& [promise, f, arg_pack] = arg;
-
+    return_type result;
+    std::function<void()> event;
+    if constexpr (returns_void::value) {
+        event = [fn_ = std::forward<Fn_>(f),
+                 arg_tuple_ = std::make_tuple(std::forward<Args_>(args)...)]() mutable {
             // Storing exception features are only available on release build,
             //to improve debug
-#if defined(NDEBUG)
+            if constexpr (returns_void::value) {
+                std::apply(fn_, std::move(arg_tuple_));
+            }
+        };
+    }
+    else {
+        result.promise_ = std::make_shared<std::promise<callable_return_type>>();
+        event = [promise = result.promise_,
+                 fn_ = std::forward<Fn_>(f),
+                 arg_tuple_ = std::make_tuple(std::forward<Args_>(args)...)]() mutable {
             try {
-#endif
-                if constexpr (std::is_same_v<void, callable_return_type>) {
-                    std::apply(f, std::move(arg_pack));
-                    promise->set_value();
-                }
-                else {
-                    promise->set_value(std::apply(f, std::move(arg_pack)));
-                }
-#if defined(NDEBUG)
+                promise->set_value(std::apply(fn_, std::move(arg_tuple_)));
             } catch (std::exception&) {
                 do {
                     try {
@@ -161,9 +164,8 @@ decltype(auto) thread_pool::launch_task(Fn_&& f, Args_... args)
                 //retrieved when it was launched.
                 promise->set_exception(std::current_exception());
             }
-#endif
-        }
-    };
+        };
+    }
 
     using std::chrono::system_clock;
     auto elapse_begin = system_clock::now();
@@ -171,7 +173,7 @@ decltype(auto) thread_pool::launch_task(Fn_&& f, Args_... args)
     check_reserve_worker__(1);
 
     task_t task;
-    task.event = executor{std::move(value_tuple)};
+    task.event = std::move(event);
     latest_event_ = clock::now();
 
     while (!tasks_.try_push(std::move(task))) {
@@ -183,10 +185,6 @@ decltype(auto) thread_pool::launch_task(Fn_&& f, Args_... args)
     }
 
     event_wait_.notify_one();
-
-    return_type result;
-    result.promise_ = promise;
-
     return result;
 }
 

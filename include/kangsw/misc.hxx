@@ -139,4 +139,46 @@ std::string format_string(char const* fmt, Args_&&... args)
     return s;
 }
 
+enum class recurse_return {
+    do_continue,
+    do_break
+};
+
+/**
+ * 재귀적으로 작업을 수행합니다.
+ * @param root 루트가 되는 노드입니다.
+ * @param recurse Ty_로부터 하위 노드를 추출합니다. void(Ty_& parent, void (emplacer)(Ty_&)) 시그니쳐를 갖는 콜백으로, parent의 자손 노드를 iterate해 각각의 노드에 대해 emplacer(node)를 호출하여 재귀적인 작업을 수행할 수 있습니다.
+ * 
+ */
+template <typename Ty_, typename Recurse_, typename Op_>
+decltype(auto) recurse_for_each(Ty_&& root, Recurse_&& recurse, Op_&& op)
+{
+    std::vector<std::pair<Ty_&, size_t>> stack;
+    stack.emplace_back(root, 0);
+
+    while (!stack.empty()) {
+        auto ref = stack.back();
+        stack.pop_back();
+
+        if constexpr (std::is_invocable_v<Op_, Ty_, size_t>) {
+            if constexpr (std::is_invocable_r_v<recurse_return, Op_, Ty_, size_t>) {
+                if (op(ref.first, ref.second) == recurse_return::do_break) { break; }
+            }
+            else {
+                op(ref.first, ref.second);
+            }
+        }
+        else {
+            if constexpr (std::is_invocable_r_v<recurse_return, Op_, Ty_, size_t>) {
+                if (op(ref.first) == recurse_return::do_break) { break; }
+            }
+            else {
+                op(ref.first);
+            }
+        }
+
+        auto emplacer = [&stack, n = ref.second + 1](Ty_& arg) { stack.emplace_back(arg, n); };
+        recurse(ref.first, std::move(emplacer));
+    }
+}
 } // namespace kangsw

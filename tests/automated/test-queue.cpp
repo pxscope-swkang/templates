@@ -48,7 +48,7 @@ TEST_CASE("Queue async operations", "[lock_free_queue]")
 
     const size_t num_thr_wr = std::thread::hardware_concurrency() / 2;
     const size_t num_thr_rd = std::thread::hardware_concurrency() / 2;
-    const size_t num_case = 103864;
+    const size_t num_case = 16384;
     const size_t queue_capacity = 1024;
 
     vector<char> destinations;

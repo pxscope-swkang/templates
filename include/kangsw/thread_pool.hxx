@@ -10,21 +10,42 @@
 #include <type_traits>
 
 namespace kangsw {
-class thread_pool_launch_timeout_exception : public std::exception {
+class thread_pool_exception : public std::exception {
 public:
-    explicit thread_pool_launch_timeout_exception(char const* _Message)
+    explicit thread_pool_exception(char const* _Message)
         : exception(_Message)
     {
     }
 };
 
+class future_proxy_base {
+public:
+    virtual ~future_proxy_base() = default;
+};
+
 template <typename Ty_>
-class future_proxy {
+class future_proxy : public future_proxy_base {
+    using then_function_type = std::function<void(Ty_&&)>;
     friend class thread_pool;
 
+    template <typename OTy_>
+    friend class future_proxy;
+
 public:
-    Ty_ get() { return future_.get(); }
-    std::shared_future<Ty_> const& view() { return future_; }
+    Ty_ get()
+    {
+        if (std::lock_guard lock(then_lock_); then_fn_) {
+            throw thread_pool_exception("can't call get() after then() is called.");
+        }
+
+        return future_.get();
+    }
+
+    std::shared_future<Ty_> const&
+    view()
+    {
+        return future_;
+    }
 
     future_proxy() = default;
     future_proxy(const future_proxy& other) = default;
@@ -32,19 +53,36 @@ public:
     future_proxy& operator=(const future_proxy& other) = default;
     future_proxy& operator=(future_proxy&& other) noexcept = default;
 
+    template <typename Fn_, typename... Args_>
+    std::shared_ptr<future_proxy<std::invoke_result_t<Fn_, Ty_, Args_...>>>
+    then(Fn_&&, Args_&&... args);
+
 private:
-    std::shared_ptr<std::promise<Ty_>> promise_;
+    class thread_pool* owner_ = nullptr;
     std::shared_future<Ty_> future_;
+    std::promise<Ty_> promise_;
+
+    then_function_type then_fn_;
+    std::mutex then_lock_;
+
+    std::shared_ptr<future_proxy_base> deferred_proxy_;
 };
 
 template <>
-class future_proxy<void> {
+class future_proxy<void> : public future_proxy_base {
 };
 
 class thread_pool {
+    template <typename Ty_>
+    friend class future_proxy;
+
 public:
     using clock = std::chrono::system_clock;
-    using task_function = std::function<void()>;
+    using task_function_type = std::function<void()>;
+
+    struct task_t {
+        task_function_type event;
+    };
 
 public:
     thread_pool(size_t task_queue_cap_ = 1024, size_t num_workers = std::thread::hardware_concurrency(), size_t concrete_worker_count_limit = 1024) noexcept;
@@ -68,10 +106,10 @@ public:
     template <typename Fn_, typename... Args_>
     decltype(auto) launch_task(Fn_&& f, Args_... args);
 
-protected:
-    template <typename Fn_, typename... Args_>
-    static decltype(auto) _package_task(
-      thread_pool::task_function& event, Fn_&& f, Args_... args);
+public:
+    template <typename Fn_, typename... Args_> void _package_task(
+      thread_pool::task_function_type& event, std::shared_ptr<future_proxy_base> retval, Fn_&& f, Args_... args);
+    void _enqueue_task(task_t&& task);
 
 private:
     bool _try_add_worker();
@@ -80,8 +118,8 @@ private:
 
 public:
     std::chrono::milliseconds launch_timeout_ms{1000};
-    std::chrono::microseconds max_stall_interval_time{20000};
-    std::chrono::microseconds max_task_wait_time{5000};
+    std::chrono::microseconds max_stall_interval_time{std::chrono::microseconds::max()};
+    std::chrono::microseconds max_task_wait_time{std::chrono::microseconds::max()};
 
 private:
     struct worker_t {
@@ -105,10 +143,6 @@ private:
         atomic_bool_wrap_t disposer;
     };
 
-    struct task_t {
-        task_function event;
-    };
-
 private:
     safe_queue<task_t> tasks_;
     std::vector<worker_t> workers_;
@@ -126,14 +160,14 @@ private:
     std::atomic<int64_t> average_wait_;
 };
 
-template <typename Fn_, typename... Args_> decltype(auto)
-thread_pool::_package_task(thread_pool::task_function& event, Fn_&& f, Args_... args)
+template <typename Fn_, typename... Args_>
+void thread_pool::_package_task(task_function_type& event, std::shared_ptr<future_proxy_base> result, Fn_&& f, Args_... args)
 {
     using callable_return_type = std::invoke_result_t<Fn_, Args_...>;
-    using return_type = future_proxy<callable_return_type>;
+    using proxy_type = future_proxy<callable_return_type>;
     using returns_void = std::is_same<callable_return_type, void>;
     using promise_ptr = std::shared_ptr<std::promise<callable_return_type>>;
-    return_type result;
+    auto retval = std::static_pointer_cast<proxy_type>(result);
 
     if constexpr (returns_void::value) {
         event = [fn_ = std::forward<Fn_>(f),
@@ -146,24 +180,34 @@ thread_pool::_package_task(thread_pool::task_function& event, Fn_&& f, Args_... 
         };
     }
     else {
-        result.promise_ = std::make_shared<std::promise<callable_return_type>>();
-        result.future_ = result.promise_->get_future().share();
-        event = [promise_ = (result.promise_),
-                 fn_ = std::forward<Fn_>(f),
-                 arg_tuple_ = std::make_tuple(std::forward<Args_>(args)...)]() mutable {
-            if (promise_.use_count() == 1) {
-                // if given promise was discarded, don't catch exceptions
-                promise_->set_value(std::apply(fn_, std::move(arg_tuple_)));
-                return;
-            }
+        retval->owner_ = this;
+        if (retval->future_.valid() == false) {
+            retval->future_ = retval->promise_.get_future().share();
+        }
+        auto function = std::bind(std::forward<Fn_>(f), std::forward<Args_>(args)...);
+        event = [this, proxy = retval,
+                 fn_ = std::move(function)]() mutable {
+            auto& promise_ = proxy->promise_;
+
+#if KANGSW_THREAD_POOL_CATCH_PROMISE_EXCEPTIONS
             try {
-                promise_->set_value(std::apply(fn_, std::move(arg_tuple_)));
+#endif
+                auto exec_result = fn_();
+
+                if (std::lock_guard lock(proxy->then_lock_);
+                    proxy->deferred_proxy_ && proxy->then_fn_) {
+                    proxy->then_fn_(std::move(exec_result));
+                }
+                else {
+                    promise_.set_value(std::move(exec_result));
+                }
+#if KANGSW_THREAD_POOL_CATCH_PROMISE_EXCEPTIONS
             } catch (std::exception&) {
                 do {
                     try {
                         // if future was already retrieved, below statement will throw.
                         // then do nothing, to mandate error handling to caller
-                        auto v = promise_->get_future();
+                        auto v = promise_.get_future();
                     } catch (std::exception&) {
                         break;
                     }
@@ -175,41 +219,43 @@ thread_pool::_package_task(thread_pool::task_function& event, Fn_&& f, Args_... 
 
                 // if above statement did not thrown, it means the future was correctly
                 //retrieved when it was launched.
-                promise_->set_exception(std::current_exception());
+                promise_.set_exception(std::current_exception());
             }
+#endif
         };
     }
-
-    return result;
 }
 
-template <typename Fn_, typename... Args_>
-decltype(auto) thread_pool::launch_task(Fn_&& f, Args_... args)
+inline void thread_pool::_enqueue_task(task_t&& task)
 {
-    static_assert(std::is_invocable_v<Fn_, Args_...>);
-
-    using callable_return_type = std::invoke_result_t<Fn_, Args_...>;
-    using return_type = future_proxy<callable_return_type>;
-    using returns_void = std::is_same<callable_return_type, void>;
-    using promise_ptr = std::shared_ptr<std::promise<callable_return_type>>;
-
-    return_type result;
-
-    task_t task;
-    result = _package_task<Fn_, Args_...>(task.event, std::forward<Fn_>(f), std::forward<Args_>(args)...);
-
     latest_event_ = clock::now();
     for (
       auto elapse_begin = clock::now();
       !tasks_.try_push(std::move(task));
       std::this_thread::yield()) {
         if (clock::now() - elapse_begin > launch_timeout_ms) {
-            throw thread_pool_launch_timeout_exception{""};
+            throw thread_pool_exception{""};
         }
     }
 
     _check_reserve_worker(1);
     event_wait_.notify_one();
+}
+template <typename Fn_, typename... Args_>
+decltype(auto) thread_pool::launch_task(Fn_&& f, Args_... args)
+{
+    static_assert(std::is_invocable_v<Fn_, Args_...>);
+
+    using callable_return_type = std::invoke_result_t<Fn_, Args_...>;
+    using proxy_type = future_proxy<callable_return_type>;
+    using returns_void = std::is_same<callable_return_type, void>;
+    using promise_ptr = std::shared_ptr<std::promise<callable_return_type>>;
+
+    task_t task;
+    auto result = std::make_shared<proxy_type>();
+    _package_task<Fn_, Args_...>(task.event, result, std::forward<Fn_>(f), std::forward<Args_>(args)...);
+
+    _enqueue_task(std::move(task));
     return result;
 }
 
@@ -329,6 +375,38 @@ inline void thread_pool::_check_reserve_worker(size_t threshold)
     }
 }
 
+template <typename Ty_> template <typename Fn_, typename... Args_>
+std::shared_ptr<future_proxy<std::invoke_result_t<Fn_, Ty_, Args_...>>>
+future_proxy<Ty_>::then(Fn_&& f, Args_&&... args)
+{
+    static_assert(std::is_invocable_v<Fn_, Ty_, Args_...>);
+
+    std::lock_guard _0(then_lock_);
+    if (deferred_proxy_) {
+        throw thread_pool_exception("invalid multiple then() request");
+    }
+
+    if (future_.valid()
+        && future_.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+        // if async execution was already done before call then(),
+        //queue bound task immediately.
+        return owner_->launch_task(std::forward<Fn_>(f), future_.get(), std::forward<Args_>(args)...);
+    }
+
+    using proxy_type = future_proxy<std::invoke_result_t<Fn_, Ty_, Args_...>>;
+    auto deferred = std::make_shared<proxy_type>();
+    deferred->future_ = deferred->promise_.get_future().share();
+    deferred_proxy_ = deferred;
+
+    auto bound = std::bind(std::forward<Fn_>(f), std::placeholders::_1, std::forward<Args_>(args)...);
+    then_fn_ = [this, fn_ = std::move(bound)](Ty_&& r) mutable {
+        thread_pool::task_function_type fn;
+        owner_->_package_task(fn, deferred_proxy_, std::move(fn_), std::move(r));
+        owner_->_enqueue_task({std::move(fn)});
+    };
+    return deferred;
+}
+
 // timer thread pool
 class timer_thread_pool : public thread_pool {
 public:
@@ -383,8 +461,10 @@ public:
     template <typename Fn_, typename... Args_>
     decltype(auto) launch_timer(clock::time_point issue, Fn_&& f, Args_... args)
     {
-        task_function event;
-        auto result = _package_task(event, std::forward<Fn_>(f), std::forward<Args_>(args)...);
+        task_function_type event;
+        using proxy_type = future_proxy<std::invoke_result_t<Fn_, Args_...>>;
+        auto result = std::make_shared<proxy_type>();
+        _package_task(event, result, std::forward<Fn_>(f), std::forward<Args_>(args)...);
 
         if (std::unique_lock lock(timer_lock_); lock) {
             pending_timers_.emplace(issue, std::move(event));
@@ -417,4 +497,5 @@ private:
     std::atomic_size_t num_waiting_timer_;
     mutable std::mutex timer_lock_;
 };
+
 } // namespace kangsw

@@ -1,6 +1,6 @@
 #pragma once
 #include <atomic>
-#include <deque>
+#include <list>
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
@@ -14,22 +14,27 @@ public:
 
 public:
     safe_queue(size_t capacity)
-        : array_(std::make_unique<element_type[]>(capacity + 1))
+        : array_elem_(new element_type[capacity + 1])
+        , array_occupied_(new std::atomic_bool[capacity + 1])
         , capacity_(capacity + 1)
     {
+        memset(array_occupied_.get(), 0, capacity + 1);
     }
 
     template <typename RTy_>
     bool try_push(RTy_&& elem)
     {
-        size_t tail = tail_write_.load();
+        size_t tail = tail_.load();
         size_t next = (tail + 1) % capacity_;
-        if (next == head_fence()) { return false; }
+        if (next == head()) { return false; }
 
-        // race condition으로 인해 실패했다면 즉시 재시도합니다.
-        if (tail_write_.compare_exchange_weak(tail, next)) {
-            array_[tail] = std::forward<RTy_>(elem);
-            tail_fence_.fetch_add(1, std::memory_order_seq_cst);
+        if (tail_.compare_exchange_weak(tail, next)) {
+            // tail is unique here.
+            // wait until other thread's reading head consumes current slot.
+            while (array_occupied_[tail]) {}
+
+            array_elem_[tail] = std::forward<RTy_>(elem);
+            array_occupied_[tail].store(true);
             return true;
         }
         return false;
@@ -37,30 +42,32 @@ public:
 
     bool try_pop(Ty_& retval)
     {
-        size_t head = head_read_.load();
+        size_t head = head_.load();
         size_t next = (head + 1) % capacity_;
-        if (head == tail_fence()) { return false; }
+        if (head == tail()) { return false; }
 
-        if (head_read_.compare_exchange_weak(head, next)) {
-            retval = std::move(array_[head]);
-            head_fence_.fetch_add(1, std::memory_order_seq_cst);
+        if (head_.compare_exchange_weak(head, next)) {
+            // head is unique here.
+            // wait until other thread's writing tail fills current slot
+            while (!array_occupied_[head]) {}
+
+            retval = std::move(array_elem_[head]);
+            array_occupied_[head].store(false); // consumes slot.
             return true;
         }
         return false;
     }
 
-    bool empty() const { return head_fence() == tail_fence(); }
+    bool empty() const { return head() == tail(); }
 
     size_t capacity() const { return capacity_ - 1; }
-    size_t head_fence() const { return head_fence_.load() % capacity_; }
-    size_t head_read() const { return head_read_.load(); }
-    size_t tail_write() const { return tail_write_.load(); }
-    size_t tail_fence() const { return tail_fence_.load() % capacity_; }
+    size_t head() const { return head_.load(); }
+    size_t tail() const { return tail_.load(); }
 
     size_t size() const
     {
-        size_t head = head_fence();
-        size_t tail = tail_fence();
+        size_t head = head_;
+        size_t tail = tail_;
 
         return tail >= head
                  ? tail - head
@@ -68,14 +75,13 @@ public:
     }
 
 private:
-    std::unique_ptr<element_type[]> array_;
+    std::unique_ptr<element_type[]> array_elem_;
+    std::unique_ptr<std::atomic_bool[]> array_occupied_;
     size_t capacity_;
-    std::atomic_size_t head_fence_ = 0;
-    std::atomic_size_t head_read_ = 0;
-    std::atomic_size_t tail_write_ = 0;
-    std::atomic_size_t tail_fence_ = 0;
+    std::atomic_size_t head_ = 0;
+    std::atomic_size_t tail_ = 0;
 };
-} // namespace lock_free
+} // namespace LOCK_FREE__
 
 inline namespace LOCK__ {
 template <typename Ty_>
@@ -120,10 +126,8 @@ public:
     }
 
     size_t capacity() const { return -1; }
-    size_t head_fence() const { return 0; }
-    size_t head_read() const { return 0; }
-    size_t tail_write() const { return 0; }
-    size_t tail_fence() const { return 0; }
+    size_t head() const { return 0; }
+    size_t tail() const { return 0; }
 
     size_t size() const
     {
@@ -132,8 +136,8 @@ public:
     }
 
 private:
-    std::deque<element_type> queue_;
+    std::list<element_type> queue_;
     mutable std::shared_mutex queue_lock_;
 };
-} // namespace lock
-} // namespace templates
+} // namespace LOCK__
+} // namespace kangsw

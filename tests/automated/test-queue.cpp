@@ -101,7 +101,6 @@ TEST_CASE("Queue async operations", "[lock_free_queue]")
     auto zero_cnt = std::count(destinations.begin(), destinations.end(), 0);
     auto not_one_count = std::count(destinations.begin(), destinations.end(), 1);
     INFO("rd_fail: " << num_rd_fail << ", wr_fail: " << num_wr_fail);
-    CHECK(queue.head_read() == queue.head_fence());
     CHECK(read_count == destinations.size());
     CHECK(zero_cnt == 0);
     CHECK((destinations.size() - not_one_count) == 0);

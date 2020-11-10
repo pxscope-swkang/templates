@@ -13,9 +13,9 @@ TEST_CASE("thread pool default operation", "[thread_pool]")
     printf("<< THREAD POOL TEST >>");
     for (int ITER = 1; ITER; ITER--) {
         printf("\n [%4d] -------------------------------- \n", ITER);
-        enum { num_cases = 1024 };
+        enum { num_cases = 2048 };
 
-        timer_thread_pool thr{1024, 1};
+        timer_thread_pool thr{32, 1};
         thr.max_task_wait_time = 2ms;
         static array<pair<double, future_proxy<double>>, num_cases> futures;
         static array<char, num_cases> executed_list;
@@ -81,4 +81,6 @@ TEST_CASE("thread pool default operation", "[thread_pool]")
 
         cout << "\033F";
     }
+
+    cout << '\n';
 }

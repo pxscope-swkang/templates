@@ -525,7 +525,10 @@ public:
         auto result = std::make_shared<proxy_type>();
         _package_task(event, result, std::forward<Fn_>(f), std::forward<Args_>(args)...);
 
-        if (std::unique_lock lock(timer_lock_); lock) {
+        if (issue <= clock::now()) {
+            _enqueue_task({std::move(event)});
+        }
+        else if (std::unique_lock lock(timer_lock_); lock) {
             pending_timers_.emplace(issue, std::move(event));
 
             nearlest_awake_.store(pending_timers_.begin()->first);

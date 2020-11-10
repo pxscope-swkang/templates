@@ -16,7 +16,8 @@ TEST_CASE("thread pool default operation", "[thread_pool]")
         enum { num_cases = 2048 };
 
         timer_thread_pool thr{32, 1};
-        thr.max_task_wait_time = 1ms;
+        thr.max_task_wait_time = 2ms;
+        thr.max_stall_interval_time = 2ms;
         static array<pair<double, std::shared_ptr<future_proxy<double>>>, num_cases> futures;
         static array<char, num_cases> executed_list;
         memset(executed_list.data(), 0, sizeof executed_list);
@@ -46,10 +47,10 @@ TEST_CASE("thread pool default operation", "[thread_pool]")
                     executed_list[static_cast<size_t>(c + 0.5)] = 2;
                     return (double)c;
                 })
-                ->then([&](double c) {
+                ->then([i]() {
                     this_thread::sleep_for(chrono::milliseconds(rand() % 50));
-                    executed_list[static_cast<size_t>(c + 0.5)] = 3;
-                    return c * c;
+                    executed_list[static_cast<size_t>(i + 0.5)] = 3;
+                    return (double)i * i;
                 }));
         });
 

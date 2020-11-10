@@ -6,6 +6,7 @@
 #include <map>
 #include <mutex>
 #include <optional>
+#include <shared_mutex>
 #include <thread>
 #include <type_traits>
 
@@ -38,6 +39,10 @@ public:
             throw thread_pool_exception("can't call get() after then() is called.");
         }
 
+        while (future_.valid() == false) {
+            using namespace std::chrono_literals;
+            std::this_thread::sleep_for(100us);
+        }
         return future_.get();
     }
 
@@ -55,6 +60,10 @@ public:
 
     template <typename Fn_, typename... Args_>
     std::shared_ptr<future_proxy<std::invoke_result_t<Fn_, Ty_, Args_...>>>
+    then(Fn_&&, Args_&&... args);
+
+    template <typename Fn_, typename... Args_>
+    std::shared_ptr<future_proxy<std::invoke_result_t<Fn_, Args_...>>>
     then(Fn_&&, Args_&&... args);
 
 private:
@@ -94,7 +103,7 @@ public:
     thread_pool& operator=(thread_pool&& other) noexcept = delete;
 
 public:
-    void resize_worker_pool(size_t new_size);
+    void resize_worker_pool(size_t new_size, bool is_trial = false);
     size_t num_workers() const { return num_workers_cached_; }
     size_t num_pending_task() const { return tasks_.size(); }
     size_t task_queue_capacity() const { return tasks_.capacity(); }
@@ -118,8 +127,8 @@ private:
 
 public:
     std::chrono::milliseconds launch_timeout_ms{1000};
-    std::chrono::microseconds max_stall_interval_time{std::chrono::microseconds::max()};
-    std::chrono::microseconds max_task_wait_time{std::chrono::microseconds::max()};
+    std::chrono::microseconds max_stall_interval_time{1000000};
+    std::chrono::microseconds max_task_wait_time{1000000};
 
 private:
     struct worker_t {
@@ -146,7 +155,7 @@ private:
 private:
     safe_queue<task_t> tasks_;
     std::vector<worker_t> workers_;
-    mutable std::mutex worker_lock_;
+    mutable std::shared_mutex worker_lock_;
 
     std::condition_variable event_wait_;
     mutable std::mutex event_lock_;
@@ -181,9 +190,7 @@ void thread_pool::_package_task(task_function_type& event, std::shared_ptr<futur
     }
     else {
         retval->owner_ = this;
-        if (retval->future_.valid() == false) {
-            retval->future_ = retval->promise_.get_future().share();
-        }
+        retval->future_ = retval->promise_.get_future().share();
         auto function = std::bind(std::forward<Fn_>(f), std::forward<Args_>(args)...);
         event = [this, proxy = retval,
                  fn_ = std::move(function)]() mutable {
@@ -248,7 +255,6 @@ decltype(auto) thread_pool::launch_task(Fn_&& f, Args_... args)
 
     using callable_return_type = std::invoke_result_t<Fn_, Args_...>;
     using proxy_type = future_proxy<callable_return_type>;
-    using returns_void = std::is_same<callable_return_type, void>;
     using promise_ptr = std::shared_ptr<std::promise<callable_return_type>>;
 
     task_t task;
@@ -263,7 +269,7 @@ inline thread_pool::thread_pool(size_t task_queue_cap_, size_t num_workers, size
     : tasks_(task_queue_cap_)
     , num_max_workers_(worker_limit)
 {
-    resize_worker_pool(num_workers);
+    resize_worker_pool(num_workers, false);
 }
 
 inline thread_pool::~thread_pool()
@@ -271,21 +277,23 @@ inline thread_pool::~thread_pool()
     _pop_workers(workers_.size());
 }
 
-inline void thread_pool::resize_worker_pool(size_t new_size)
+inline void thread_pool::resize_worker_pool(size_t new_size, bool is_trial)
 {
     new_size = std::min(num_max_workers_.load(), new_size);
     if (new_size == 0) {
         throw std::invalid_argument{"Size 0 is not allowed"};
     }
 
-    std::lock_guard<std::mutex> lock(worker_lock_);
-    if (new_size > workers_.size()) {
-        while (new_size != workers_.size()) {
-            _try_add_worker();
+    std::unique_lock lock(worker_lock_, std::defer_lock);
+    if (!is_trial || lock.try_lock()) {
+        if (new_size > workers_.size()) {
+            while (new_size != workers_.size()) {
+                _try_add_worker();
+            }
         }
-    }
-    else if (new_size < workers_.size()) {
-        _pop_workers(workers_.size() - new_size);
+        else if (new_size < workers_.size()) {
+            _pop_workers(workers_.size() - new_size);
+        }
     }
 }
 
@@ -295,7 +303,7 @@ inline void thread_pool::num_max_workers(size_t value)
         throw std::invalid_argument("0 is not allowed");
     }
 
-    std::lock_guard<std::mutex> lock{worker_lock_};
+    std::shared_lock lock{worker_lock_};
     num_max_workers_ = value;
 
     if (value < workers_.size()) {
@@ -371,7 +379,7 @@ inline void thread_pool::_check_reserve_worker(size_t threshold)
       num_available_workers() <= threshold
       && (clock::now() - latest_active_.load() > max_stall_interval_time
           || average_wait() > max_task_wait_time)) {
-        resize_worker_pool((num_workers() & ~1) + 2);
+        resize_worker_pool((num_workers() & ~1) + 2, true);
     }
 }
 
@@ -395,7 +403,6 @@ future_proxy<Ty_>::then(Fn_&& f, Args_&&... args)
 
     using proxy_type = future_proxy<std::invoke_result_t<Fn_, Ty_, Args_...>>;
     auto deferred = std::make_shared<proxy_type>();
-    deferred->future_ = deferred->promise_.get_future().share();
     deferred_proxy_ = deferred;
 
     auto bound = std::bind(std::forward<Fn_>(f), std::placeholders::_1, std::forward<Args_>(args)...);
@@ -404,6 +411,40 @@ future_proxy<Ty_>::then(Fn_&& f, Args_&&... args)
         owner_->_package_task(fn, deferred_proxy_, std::move(fn_), std::move(r));
         owner_->_enqueue_task({std::move(fn)});
     };
+
+    return deferred;
+}
+
+template <typename Ty_> template <typename Fn_, typename... Args_> std::shared_ptr<future_proxy<std::invoke_result_t<Fn_, Args_...>>>
+future_proxy<Ty_>::then(Fn_&& f, Args_&&... args)
+{
+    static_assert(std::is_invocable_v<Fn_, Args_...>);
+
+    std::lock_guard _0(then_lock_);
+    if (deferred_proxy_) {
+        throw thread_pool_exception("invalid multiple then() request");
+    }
+
+    if (future_.valid()
+        && future_.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+        // if async execution was already done before call then(),
+        //queue bound task immediately.
+        return owner_->launch_task(std::forward<Fn_>(f), std::forward<Args_>(args)...);
+    }
+
+    using proxy_type = future_proxy<std::invoke_result_t<Fn_, Args_...>>;
+    auto deferred = std::make_shared<proxy_type>();
+    deferred_proxy_ = deferred;
+
+    auto bound = std::bind(std::forward<Fn_>(f), std::forward<Args_>(args)...);
+
+    thread_pool::task_function_type fn;
+    owner_->_package_task(fn, deferred_proxy_, std::forward<Fn_>(f), std::forward<Args_>(args)...);
+
+    then_fn_ = [this, fn_ = std::move(fn)](Ty_&&) mutable {
+        owner_->_enqueue_task({std::move(fn_)});
+    };
+
     return deferred;
 }
 

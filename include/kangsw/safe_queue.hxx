@@ -6,7 +6,7 @@
 #include <shared_mutex>
 
 namespace kangsw {
-namespace LOCK_FREE__ {
+namespace LOCK_FREE_CIRCULAR_DEPRECATED__ {
 template <typename Ty_>
 class safe_queue {
 public:
@@ -81,14 +81,13 @@ private:
     std::atomic_size_t head_ = 0;
     std::atomic_size_t tail_ = 0;
 };
-} // namespace LOCK_FREE__
-
+} // namespace LOCK_FREE_CIRCULAR_DEPRECATED__
 inline namespace LOCK__ {
 template <typename Ty_>
 class safe_queue {
 public:
-    using difference_type = std::ptrdiff_t;
     using element_type = Ty_;
+    using difference_type = std::ptrdiff_t;
     using read_lock_type = std::shared_lock<std::shared_mutex>;
     using write_lock_type = std::lock_guard<std::shared_mutex>;
 
@@ -106,8 +105,7 @@ public:
         return true;
     }
 
-    bool
-    try_pop(Ty_& retval)
+    bool try_pop(Ty_& retval)
     {
         write_lock_type lock(queue_lock_);
         if (queue_.empty()) {

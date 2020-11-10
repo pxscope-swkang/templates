@@ -46,9 +46,9 @@ TEST_CASE("Queue async operations", "[lock_free_queue]")
     using std::vector;
     using namespace std::chrono_literals;
 
-    const size_t num_thr_wr = 34;
-    const size_t num_thr_rd = 12;
-    const size_t num_case = 10386;
+    const size_t num_thr_wr = std::thread::hardware_concurrency() / 2;
+    const size_t num_thr_rd = std::thread::hardware_concurrency() / 2;
+    const size_t num_case = 103864;
     const size_t queue_capacity = 1024;
 
     vector<char> destinations;
@@ -61,6 +61,7 @@ TEST_CASE("Queue async operations", "[lock_free_queue]")
     std::atomic_size_t read_count = 0;
     std::atomic_size_t num_wr_fail = 0;
     std::atomic_size_t num_rd_fail = 0;
+    auto elapse_begin = std::chrono::system_clock::now();
 
     for (int i = 0; i < num_thr_wr; ++i) {
         writers.emplace_back([&, index = i]() {
@@ -97,6 +98,8 @@ TEST_CASE("Queue async operations", "[lock_free_queue]")
 
     for (auto& thr : writers) { thr.join(); }
     for (auto& thr : readers) { thr.join(); }
+    std::chrono::duration<double> elapsed = std::chrono::system_clock::now() - elapse_begin;
+    printf("Processing %llu element queue: %f seconds\n", num_case, elapsed.count());
 
     auto zero_cnt = std::count(destinations.begin(), destinations.end(), 0);
     auto not_one_count = std::count(destinations.begin(), destinations.end(), 1);

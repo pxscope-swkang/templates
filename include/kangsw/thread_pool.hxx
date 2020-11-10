@@ -115,7 +115,7 @@ public:
     void num_max_workers(size_t value);
 
     template <typename Fn_, typename... Args_>
-    decltype(auto) launch_task(Fn_&& f, Args_... args);
+    decltype(auto) task(Fn_&& f, Args_... args);
 
 public:
     template <typename Fn_, typename... Args_> void _package_task(
@@ -257,7 +257,7 @@ inline void thread_pool::_enqueue_task(task_t&& task)
     event_wait_.notify_one();
 }
 template <typename Fn_, typename... Args_>
-decltype(auto) thread_pool::launch_task(Fn_&& f, Args_... args)
+decltype(auto) thread_pool::task(Fn_&& f, Args_... args)
 {
     static_assert(std::is_invocable_v<Fn_, Args_...>);
 
@@ -416,7 +416,7 @@ future_proxy<Ty_>::then(Fn_&& f, Args_&&... args)
         && future_.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
         // if async execution was already done before call then(),
         //queue bound task immediately.
-        return owner_->launch_task(std::forward<Fn_>(f), future_.get(), std::forward<Args_>(args)...);
+        return owner_->task(std::forward<Fn_>(f), future_.get(), std::forward<Args_>(args)...);
     }
 
     using proxy_type = future_proxy<std::invoke_result_t<Fn_, Ty_, Args_...>>;
@@ -447,7 +447,7 @@ future_proxy<Ty_>::then(Fn_&& f, Args_&&... args)
         && future_.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
         // if async execution was already done before call then(),
         //queue bound task immediately.
-        return owner_->launch_task(std::forward<Fn_>(f), std::forward<Args_>(args)...);
+        return owner_->task(std::forward<Fn_>(f), std::forward<Args_>(args)...);
     }
 
     using proxy_type = future_proxy<std::invoke_result_t<Fn_, Args_...>>;
@@ -491,7 +491,7 @@ public:
                            && clock::now() > pending_timers_.begin()->first) {
                         // since 'pending_timers_' is always sorted by ascending order,
                         //frontmost element is always the first pending timer node.
-                        launch_task(std::move(pending_timers_.begin()->second));
+                        task(std::move(pending_timers_.begin()->second));
                         pending_timers_.erase(pending_timers_.begin());
                     }
 
@@ -518,7 +518,7 @@ public:
 
 public:
     template <typename Fn_, typename... Args_>
-    decltype(auto) launch_timer(clock::time_point issue, Fn_&& f, Args_... args)
+    decltype(auto) timer(clock::time_point issue, Fn_&& f, Args_... args)
     {
         task_function_type event;
         using proxy_type = future_proxy<std::invoke_result_t<Fn_, Args_...>>;
@@ -540,9 +540,9 @@ public:
     }
 
     template <typename Fn_, typename... Args_>
-    decltype(auto) launch_timer(std::chrono::microseconds delay, Fn_&& f, Args_... args)
+    decltype(auto) timer(std::chrono::microseconds delay, Fn_&& f, Args_... args)
     {
-        return launch_timer(clock::now() + delay, std::forward<Fn_>(f), std::forward<Args_>(args)...);
+        return timer(clock::now() + delay, std::forward<Fn_>(f), std::forward<Args_>(args)...);
     }
 
 public:

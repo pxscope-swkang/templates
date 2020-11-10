@@ -8,12 +8,13 @@
 using namespace kangsw;
 using namespace std;
 
+constexpr int num_cases = 2048
+;
 TEST_CASE("thread pool default operation", "[thread_pool]")
 {
     printf("<< THREAD POOL TEST >>");
     for (int ITER = 4; ITER; ITER--) {
         printf("\n [%4d] -------------------------------- \n", ITER);
-        enum { num_cases = 2048 };
 
         timer_thread_pool thr{32, 1};
         thr.max_task_interval_time = 3ms;
@@ -35,7 +36,7 @@ TEST_CASE("thread pool default operation", "[thread_pool]")
             auto exec_time = chrono::system_clock::now() + chrono::milliseconds(rand() % 200);
             futures[i] = make_pair(
               (double)i,
-              thr.launch_timer(
+              thr.timer(
                    exec_time, [&, at_exec = exec_time](double c) {
                        this_thread::sleep_for(chrono::milliseconds(rand() % 8));
                        finish_time[fill_index++] = chrono::system_clock::time_point(at_exec - pivot_time);

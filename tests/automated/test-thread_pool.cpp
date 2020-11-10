@@ -16,8 +16,9 @@ TEST_CASE("thread pool default operation", "[thread_pool]")
         enum { num_cases = 2048 };
 
         timer_thread_pool thr{32, 1};
-        thr.max_task_wait_time = 2ms;
-        thr.max_stall_interval_time = 2ms;
+        thr.max_task_interval_time = 3ms;
+        thr.max_task_wait_time = 30ms;
+        thr.max_stall_interval_time = 1022322ms;
         static array<pair<double, std::shared_ptr<future_proxy<double>>>, num_cases> futures;
         static array<char, num_cases> executed_list;
         memset(executed_list.data(), 0, sizeof executed_list);
@@ -26,7 +27,7 @@ TEST_CASE("thread pool default operation", "[thread_pool]")
         static array<chrono::system_clock::time_point, num_cases> finish_time;
         auto pivot_time = chrono::system_clock::now();
 
-        thr.num_max_workers(256);
+        thr.num_max_workers(32);
 
         // multithreaded enqueing
         counter_range counter(num_cases);
@@ -36,19 +37,19 @@ TEST_CASE("thread pool default operation", "[thread_pool]")
               (double)i,
               thr.launch_timer(
                    exec_time, [&, at_exec = exec_time](double c) {
-                       this_thread::sleep_for(chrono::milliseconds(rand() % 50));
+                       this_thread::sleep_for(chrono::milliseconds(rand() % 8));
                        finish_time[fill_index++] = chrono::system_clock::time_point(at_exec - pivot_time);
                        executed_list[static_cast<size_t>(c + 0.5)] = 1;
                        return (int)(c + 0.5);
                    },
                    (double)i)
                 ->then([&](int c) {
-                    this_thread::sleep_for(chrono::milliseconds(rand() % 50));
+                    this_thread::sleep_for(chrono::milliseconds(rand() % 25));
                     executed_list[static_cast<size_t>(c + 0.5)] = 2;
                     return (double)c;
                 })
                 ->then([i]() {
-                    this_thread::sleep_for(chrono::milliseconds(rand() % 50));
+                    this_thread::sleep_for(chrono::milliseconds(rand() % 16));
                     executed_list[static_cast<size_t>(i + 0.5)] = 3;
                     return (double)i * i;
                 }));
@@ -73,8 +74,8 @@ TEST_CASE("thread pool default operation", "[thread_pool]")
                  << ">> Threads (" << setw(4) << thr.num_workers()
                  << ") Count [" << setw(6) << thr.num_total_waitings()
                  << kangsw::format_string(" (%4d/%4d/%4d/%4d)", st[0], st[1], st[2], st[3])
-                 << "] Avg Wait: "
-                 << chrono::duration<float>(thr.average_wait()).count()
+                 << "] Avg Wait: " << setprecision(4) << setw(8) << fixed
+                 << chrono::duration<double>(thr.average_wait()).count() * 1000 << " ms"
                  << (next_line || out_count == 1 ? "\n" : "\r");
             this_thread::sleep_for(33ms);
         } while ((out_count += thr.num_total_waitings() == 0) < 7);

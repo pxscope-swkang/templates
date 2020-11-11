@@ -115,7 +115,7 @@ public:
     void num_max_workers(size_t value);
 
     template <typename Fn_, typename... Args_>
-    decltype(auto) task(Fn_&& f, Args_... args);
+    decltype(auto) add_task(Fn_&& f, Args_... args);
 
 public:
     template <typename Fn_, typename... Args_> void _package_task(
@@ -132,6 +132,7 @@ public:
     std::chrono::microseconds max_stall_interval_time{1000000};
     std::chrono::microseconds max_task_interval_time{1000000};
     std::chrono::microseconds max_task_wait_time{1000000};
+    std::atomic_size_t average_weight = 10;
 
 private:
     struct worker_t {
@@ -257,7 +258,7 @@ inline void thread_pool::_enqueue_task(task_t&& task)
     event_wait_.notify_one();
 }
 template <typename Fn_, typename... Args_>
-decltype(auto) thread_pool::task(Fn_&& f, Args_... args)
+decltype(auto) thread_pool::add_task(Fn_&& f, Args_... args)
 {
     static_assert(std::is_invocable_v<Fn_, Args_...>);
 
@@ -323,6 +324,7 @@ inline void thread_pool::num_max_workers(size_t value)
 
 inline bool thread_pool::_try_add_worker()
 {
+    static auto constexpr RELAXED = std::memory_order_relaxed;
     if (workers_.size() >= num_max_workers_) {
         return false;
     }
@@ -330,9 +332,9 @@ inline bool thread_pool::_try_add_worker()
     auto worker = [this, index = workers_.size()]() {
         task_t task;
 
-        auto calc_diff = [](clock::time_point issued, size_t average) {
+        auto calc_diff = [this](clock::time_point issued, size_t average, size_t weight) {
             auto wait_time = (clock::now() - issued).count();
-            auto new_average = ((average * 7) + wait_time) / 8;
+            auto new_average = ((average * (weight - 1)) + wait_time) / weight;
             auto diff = new_average - average;
 
             return diff;
@@ -340,16 +342,17 @@ inline bool thread_pool::_try_add_worker()
 
         while (workers_[index].disposer.value == false) {
             if (tasks_.try_pop(task)) {
+                auto weight = std::max<size_t>(1, average_weight.load(RELAXED));
 
-                auto issued = latest_event_.load();
-                auto average = average_interval_.load();
-                average_interval_.fetch_add(calc_diff(issued, average));
+                auto issued = latest_event_.load(RELAXED);
+                auto average = average_interval_.load(RELAXED);
+                average_interval_.fetch_add(calc_diff(issued, average, weight), RELAXED);
 
                 issued = std::max(task.issued, latest_worker_change_.load());
-                average = average_wait_.load();
-                average_wait_.fetch_add(calc_diff(issued, average));
+                average = average_wait_.load(RELAXED);
+                average_wait_.fetch_add(calc_diff(issued, average, weight), RELAXED);
 
-                _check_reserve_worker(1);
+                _check_reserve_worker(2);
                 latest_active_ = clock::now();
                 latest_event_ = clock::now();
                 num_working_workers_.fetch_add(1);
@@ -416,7 +419,7 @@ future_proxy<Ty_>::then(Fn_&& f, Args_&&... args)
         && future_.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
         // if async execution was already done before call then(),
         //queue bound task immediately.
-        return owner_->task(std::forward<Fn_>(f), future_.get(), std::forward<Args_>(args)...);
+        return owner_->add_task(std::forward<Fn_>(f), future_.get(), std::forward<Args_>(args)...);
     }
 
     using proxy_type = future_proxy<std::invoke_result_t<Fn_, Ty_, Args_...>>;
@@ -447,7 +450,7 @@ future_proxy<Ty_>::then(Fn_&& f, Args_&&... args)
         && future_.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
         // if async execution was already done before call then(),
         //queue bound task immediately.
-        return owner_->task(std::forward<Fn_>(f), std::forward<Args_>(args)...);
+        return owner_->add_task(std::forward<Fn_>(f), std::forward<Args_>(args)...);
     }
 
     using proxy_type = future_proxy<std::invoke_result_t<Fn_, Args_...>>;
@@ -491,7 +494,7 @@ public:
                            && clock::now() > pending_timers_.begin()->first) {
                         // since 'pending_timers_' is always sorted by ascending order,
                         //frontmost element is always the first pending timer node.
-                        task(std::move(pending_timers_.begin()->second));
+                        add_task(std::move(pending_timers_.begin()->second));
                         pending_timers_.erase(pending_timers_.begin());
                     }
 
@@ -518,7 +521,7 @@ public:
 
 public:
     template <typename Fn_, typename... Args_>
-    decltype(auto) timer(clock::time_point issue, Fn_&& f, Args_... args)
+    decltype(auto) add_timer(clock::time_point issue, Fn_&& f, Args_... args)
     {
         task_function_type event;
         using proxy_type = future_proxy<std::invoke_result_t<Fn_, Args_...>>;
@@ -540,9 +543,9 @@ public:
     }
 
     template <typename Fn_, typename... Args_>
-    decltype(auto) timer(std::chrono::microseconds delay, Fn_&& f, Args_... args)
+    decltype(auto) add_timer(std::chrono::microseconds delay, Fn_&& f, Args_... args)
     {
-        return timer(clock::now() + delay, std::forward<Fn_>(f), std::forward<Args_>(args)...);
+        return add_timer(clock::now() + delay, std::forward<Fn_>(f), std::forward<Args_>(args)...);
     }
 
 public:

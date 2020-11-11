@@ -27,6 +27,7 @@ struct mult : kangsw::infix::base<mult> {
 
 TEST_CASE("infix feature test", "[custom_infix]")
 {
+    printf("HEll, world!");
     REQUIRE((1 IX_ADD 2) == 3);
     REQUIRE((1 ^ add ^ 2) == 3);
     REQUIRE((1 / add / 2) == 3);

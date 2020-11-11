@@ -8,18 +8,18 @@
 using namespace kangsw;
 using namespace std;
 
-constexpr int num_cases = 2048
-;
+constexpr int num_cases = 256;
 TEST_CASE("thread pool default operation", "[thread_pool]")
 {
     printf("<< THREAD POOL TEST >>");
-    for (int ITER = 4; ITER; ITER--) {
+    for (int ITER = 1; ITER; ITER--) {
         printf("\n [%4d] -------------------------------- \n", ITER);
 
         timer_thread_pool thr{32, 1};
-        thr.max_task_interval_time = 3ms;
-        thr.max_task_wait_time = 30ms;
+        thr.max_task_interval_time = 14ms;
+        thr.max_task_wait_time = 100ms;
         thr.max_stall_interval_time = 1022322ms;
+        thr.average_weight = 10;
         static array<pair<double, std::shared_ptr<future_proxy<double>>>, num_cases> futures;
         static array<char, num_cases> executed_list;
         memset(executed_list.data(), 0, sizeof executed_list);
@@ -28,15 +28,15 @@ TEST_CASE("thread pool default operation", "[thread_pool]")
         static array<chrono::system_clock::time_point, num_cases> finish_time;
         auto pivot_time = chrono::system_clock::now();
 
-        thr.num_max_workers(32);
+        thr.num_max_workers(256);
 
         // multithreaded enqueing
         counter_range counter(num_cases);
         for_each(std::execution::par_unseq, counter.begin(), counter.end(), [&](size_t i) {
-            auto exec_time = chrono::system_clock::now() + chrono::milliseconds(rand() % 200);
+            auto exec_time = chrono::system_clock::now() + chrono::milliseconds(rand() % 1200);
             futures[i] = make_pair(
               (double)i,
-              thr.timer(
+              thr.add_timer(
                    exec_time, [&, at_exec = exec_time](double c) {
                        this_thread::sleep_for(chrono::milliseconds(rand() % 8));
                        finish_time[fill_index++] = chrono::system_clock::time_point(at_exec - pivot_time);
@@ -103,4 +103,8 @@ TEST_CASE("thread pool default operation", "[thread_pool]")
     }
 
     cout << '\n';
+}
+
+TEST_CASE("Timer accuracy test", "[timer_thread_pool]")
+{
 }

@@ -102,7 +102,7 @@ TEST_CASE("Queue async operations", "[lock_free_queue]")
     for (auto& thr : readers) { thr.join(); }
 
     std::chrono::duration<double> elapsed = std::chrono::system_clock::now() - elapse_begin;
-    printf("Processing %llu element queue: %f seconds\n", num_case, elapsed.count());
+    INFO("Processing %llu element queue: %f seconds\n", num_case, elapsed.count());
 
     auto zero_cnt = std::count(destinations.begin(), destinations.end(), 0);
     auto not_one_count = std::count(destinations.begin(), destinations.end(), 1);

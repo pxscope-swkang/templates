@@ -110,7 +110,8 @@ public:
     size_t task_queue_capacity() const { return tasks_.capacity(); }
     size_t num_available_workers() const { return num_workers_cached_ - num_working_workers_; }
     clock::duration average_interval() const { return clock::duration(average_interval_.load()); }
-    clock::duration average_wait() const { return clock::duration(average_wait_.load()); }
+    clock::duration average_wait() const { return clock::duration(true_average_wait_.load()); }
+    clock::duration _internal_average_wait() const { return clock::duration(refreshed_average_wait_.load()); }
     size_t num_max_workers() const { return num_max_workers_; }
     void num_max_workers(size_t value);
 
@@ -172,7 +173,8 @@ private:
     std::atomic<clock::time_point> latest_event_ = clock::now();
     std::atomic<clock::time_point> latest_worker_change_ = clock::now();
     std::atomic<int64_t> average_interval_;
-    std::atomic<int64_t> average_wait_;
+    std::atomic<int64_t> refreshed_average_wait_;
+    std::atomic<int64_t> true_average_wait_;
 };
 
 template <typename Fn_, typename... Args_>
@@ -349,8 +351,10 @@ inline bool thread_pool::_try_add_worker()
                 average_interval_.fetch_add(calc_diff(issued, average, weight), RELAXED);
 
                 issued = std::max(task.issued, latest_worker_change_.load());
-                average = average_wait_.load(RELAXED);
-                average_wait_.fetch_add(calc_diff(issued, average, weight), RELAXED);
+                average = refreshed_average_wait_.load(RELAXED);
+                refreshed_average_wait_.fetch_add(calc_diff(issued, average, weight), RELAXED);
+
+                true_average_wait_.fetch_add(calc_diff(task.issued, true_average_wait_.load(RELAXED), weight), RELAXED);
 
                 _check_reserve_worker(2);
                 latest_active_ = clock::now();
@@ -399,7 +403,7 @@ inline void thread_pool::_check_reserve_worker(size_t threshold)
       num_available_workers() <= threshold
       && (clock::now() - latest_active_.load() > max_stall_interval_time
           || average_interval() > max_task_interval_time
-          || average_wait() > max_task_wait_time)) {
+          || _internal_average_wait() > max_task_wait_time)) {
         resize_worker_pool((num_workers() & ~1) + 2, true);
     }
 }

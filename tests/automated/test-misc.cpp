@@ -1,6 +1,6 @@
 #include "catch.hpp"
-#include "kangsw/infix.hxx"
 #include "kangsw/infix_macros.hxx"
+#include "kangsw/misc.hxx"
 
 namespace kangsw::misc_test {
 
@@ -40,6 +40,12 @@ TEST_CASE("infix feature test", "[custom_infix]")
     REQUIRE((1 % add % 2 % add % 3) == 6);
     REQUIRE((1 - add - 2 % add % 3) == 6);
     REQUIRE((3 << mult{} >> 6) == 18);
+}
+
+TEST_CASE("packed tuple test")
+{
+    impl__::zip_range<int*, double*> fre;
+    fre.begin();
 }
 
 } // namespace kangsw::misc_test

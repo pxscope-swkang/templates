@@ -75,7 +75,7 @@ TEST_CASE("thread pool default operation", "[.]")
             cout << setw(8) << chrono::duration_cast<chrono::milliseconds>(system_clock::now() - elapse_begin).count() << " ms "
                  << ">> Threads (" << setw(4) << thr.num_workers()
                  << ") Count [" << setw(6) << thr.num_total_waitings()
-                 << kangsw::format_string(" (%4d/%4d/%4d/%4d)", st[0], st[1], st[2], st[3])
+                 << kangsw::format(" (%4d/%4d/%4d/%4d)", st[0], st[1], st[2], st[3])
                  << "] Avg Wait: " << setprecision(4) << setw(8) << fixed
                  << chrono::duration<double>(thr.average_wait()).count() * 1000 << " ms"
                  << (next_line || out_count == 1 ? "\n" : "\r");

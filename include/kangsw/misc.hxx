@@ -2,6 +2,7 @@
 #include <execution>
 #include <iterator>
 #include <optional>
+#include <string>
 
 namespace kangsw {
 template <typename Ty_>
@@ -146,7 +147,7 @@ void for_each_indexes(int64_t begin, int64_t end, Fn_&& cb)
 }
 
 template <typename... Args_>
-std::string format_string(char const* fmt, Args_&&... args)
+std::string format(char const* fmt, Args_&&... args)
 {
     std::string s;
     auto buflen = snprintf(nullptr, 0, fmt, std::forward<Args_>(args)...);
@@ -161,25 +162,40 @@ enum class recurse_return {
     do_break
 };
 
+namespace impl__ {
+enum class recurse_policy_base {
+    preorder,
+    postorder,
+};
+template <impl__::recurse_policy_base Val_>
+using recurse_policy_v = std::integral_constant<impl__::recurse_policy_base, Val_>;
+
+} // namespace impl__
+
+namespace recurse {
+constexpr impl__::recurse_policy_v<impl__::recurse_policy_base::preorder> preorder;
+constexpr impl__::recurse_policy_v<impl__::recurse_policy_base::postorder> postorder;
+} // namespace recurse
+
 /**
  * 재귀적으로 작업을 수행합니다.
  * @param root 루트가 되는 노드입니다.
  * @param recurse Ty_로부터 하위 노드를 추출합니다. void(Ty_& parent, void (emplacer)(Ty_&)) 시그니쳐를 갖는 콜백으로, parent의 자손 노드를 iterate해 각각의 노드에 대해 emplacer(node)를 호출하여 재귀적인 작업을 수행할 수 있습니다.
+ * @param op 재귀 중 각 노드에 대해 실행할 작업입니다. [optional] recurse_return을 반환하여 재귀 도중 빠져나올 수 있습니다.
+ *          가능한 signature: 
  * 
  */
-template <typename Ty_, typename Recurse_, typename Op_>
-decltype(auto) recurse_for_each(Ty_&& root, Recurse_&& recurse, Op_&& op)
+template <
+  typename Ty_, typename Recurse_, typename Op_,
+  impl__::recurse_policy_base Policy_ = impl__::recurse_policy_base::preorder>
+decltype(auto) recurse_for_each(
+  Ty_&& root, Recurse_&& recurse, Op_&& op,
+  std::integral_constant<impl__::recurse_policy_base, Policy_> = {})
 {
-    std::vector<std::pair<Ty_&, size_t>> stack;
-    stack.emplace_back(root, 0);
-
-    while (!stack.empty()) {
-        auto ref = stack.back();
-        stack.pop_back();
-
+    auto operate = [&](auto&& ref) {
         if constexpr (std::is_invocable_v<Op_, Ty_, size_t>) {
             if constexpr (std::is_invocable_r_v<recurse_return, Op_, Ty_, size_t>) {
-                if (op(ref.first, ref.second) == recurse_return::do_break) { break; }
+                if (op(ref.first, ref.second) == recurse_return::do_break) { return false; }
             }
             else {
                 op(ref.first, ref.second);
@@ -187,16 +203,108 @@ decltype(auto) recurse_for_each(Ty_&& root, Recurse_&& recurse, Op_&& op)
         }
         else {
             if constexpr (std::is_invocable_r_v<recurse_return, Op_, Ty_, size_t>) {
-                if (op(ref.first) == recurse_return::do_break) { break; }
+                if (op(ref.first) == recurse_return::do_break) { return false; }
             }
             else {
                 op(ref.first);
             }
         }
 
-        auto emplacer = [&stack, n = ref.second + 1](Ty_& arg) { stack.emplace_back(arg, n); };
-        recurse(ref.first, std::move(emplacer));
+        return true;
+    };
+
+    if constexpr (Policy_ == impl__::recurse_policy_base::preorder) {
+        std::vector<std::pair<Ty_&, size_t>> stack;
+        stack.emplace_back(root, 0);
+
+        while (!stack.empty()) {
+            auto ref = stack.back();
+            stack.pop_back();
+
+            operate(ref);
+            recurse(ref.first, [&stack, n = ref.second + 1](Ty_& arg) { stack.emplace_back(arg, n); });
+        }
+    }
+    else if constexpr (Policy_ == impl__::recurse_policy_base::postorder) {
+        static_assert(false);
+    }
+    else {
+        static_assert(false);
     }
 }
+
+namespace impl__ {
+template <typename... Args_>
+class zip_iterator {
+public:
+    using tuple_type = std::tuple<Args_...>;
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = std::tuple<decltype(*Args_{})...>;
+    using reference = value_type&;
+    using pointer = value_type*;
+
+private:
+    template <size_t... N_>
+    value_type _deref(std::index_sequence<N_...>) const
+    {
+        return std::make_tuple(std::ref(*std::get<N_>(iterator_pack_))...);
+    }
+
+    template <size_t N_ = 0>
+    bool _compare_strict(zip_iterator const& op, bool previous)
+    {
+        if constexpr (N_ != sizeof...(Args_)) {
+            auto result = std::get<N_>(op) == std::get<N_>(iterator_pack_);
+            if (result != previous) {
+                throw std::invalid_argument("packed tuples has difference lengths");
+            }
+
+            return _compare_strict<N_ + 1>(op, result);
+        }
+        else {
+            return previous;
+        }
+    }
+
+public:
+    bool operator==(zip_iterator const& op) const
+    {
+        return _compare_strict(op, std::get<0>(op) == std::get<0>(iterator_pack_));
+    }
+
+    zip_iterator& operator++()
+    {
+        std::apply([](auto&&... arg) { (++arg, ...); }, iterator_pack_);
+        return *this;
+    }
+
+    zip_iterator operator++(int)
+    {
+        auto copy = *this;
+        return ++*this, copy;
+    }
+
+    value_type operator*() const
+    {
+        return _deref(std::make_index_sequence<sizeof...(Args_)>{});
+    }
+
+public:
+    tuple_type iterator_pack_;
+};
+
+template <typename... Args_>
+class zip_range {
+public:
+    using tuple_type = std::tuple<Args_...>;
+
+    zip_iterator<Args_...> begin() const { return {begin_}; }
+    zip_iterator<Args_...> end() const { return {end_}; }
+
+public:
+    tuple_type begin_;
+    tuple_type end_;
+};
+} // namespace impl__
 
 } // namespace kangsw

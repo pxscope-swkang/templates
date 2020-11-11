@@ -1,14 +1,13 @@
 #pragma once
-#include "safe_queue.hxx"
 #include <condition_variable>
 #include <functional>
 #include <future>
 #include <map>
 #include <mutex>
-#include <optional>
 #include <shared_mutex>
 #include <thread>
 #include <type_traits>
+#include "safe_queue.hxx"
 
 namespace kangsw {
 class thread_pool_exception : public std::exception {

@@ -146,13 +146,17 @@ TEST_CASE("Timer accuracy test")
     auto max_v = std::reduce(errors.end() - percent_5, errors.end()) / percent_5;
 
     auto to_micro = [](auto value) { return duration<double, std::micro>(value).count(); };
-    WARN("Num Case         : " << NUM_CASE);
-    WARN("Average Error Is : " << to_micro(avg_err) << " us");
-    WARN("Min Error        : " << to_micro(min_v) << " us");
-    WARN("Average Wait     : " << to_micro(workers.average_wait()) << " us");
-    WARN("Max Error        : " << to_micro(max_v) << " us");
-    WARN("Num of 5% Sample : " << percent_5);
-    WARN("Num of Workers   : " << workers.num_workers());
+    auto min_mult_by_N = (to_micro(min_v) * NUM_CASE);
+    auto max_div_by_N = to_micro(max_v) / NUM_CASE;
+    INFO("Num Case        : " << NUM_CASE);
+    INFO("Average Error Is: " << to_micro(avg_err) << " us");
+    INFO("Min Error       : " << to_micro(min_v) << " us");
+    INFO("Max Div by N    : " << max_div_by_N << " us");
+    INFO("Average Wait    : " << to_micro(workers.average_wait()) << " us");
+    INFO("Max Error       : " << to_micro(max_v) << " us");
+    INFO("Min Mult by N   : " << min_mult_by_N << " us");
+    CAPTURE(percent_5);
+    CAPTURE(workers.num_workers());
     REQUIRE(to_micro(min_v) < 500);
 }
 } // namespace kangsw::thread_pool_test

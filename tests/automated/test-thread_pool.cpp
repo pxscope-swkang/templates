@@ -7,9 +7,9 @@
 
 using namespace kangsw;
 using namespace std;
-
+namespace kangsw::thread_pool_test {
 constexpr int num_cases = 256;
-TEST_CASE("thread pool default operation", "[thread_pool]")
+TEST_CASE("thread pool default operation")
 {
     printf("<< THREAD POOL TEST >>");
     for (int ITER = 1; ITER; ITER--) {
@@ -105,6 +105,7 @@ TEST_CASE("thread pool default operation", "[thread_pool]")
     cout << '\n';
 }
 
-TEST_CASE("Timer accuracy test", "[timer_thread_pool]")
+TEST_CASE("Timer accuracy test")
 {
 }
+} // namespace kangsw::thread_pool_test

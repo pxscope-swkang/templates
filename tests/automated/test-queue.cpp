@@ -3,6 +3,7 @@
 #include <string>
 #include <thread>
 
+namespace kangsw::container_test::queue {
 TEST_CASE("Queue basic operations", "[lock_free_queue]")
 {
     using kangsw::safe_queue;
@@ -108,3 +109,4 @@ TEST_CASE("Queue async operations", "[lock_free_queue]")
     CHECK(zero_cnt == 0);
     CHECK((destinations.size() - not_one_count) == 0);
 }
+} // namespace kangsw::container_test::queue

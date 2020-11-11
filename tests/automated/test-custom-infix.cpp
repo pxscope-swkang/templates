@@ -2,6 +2,8 @@
 #include "kangsw/infix.hxx"
 #include "kangsw/infix_macros.hxx"
 
+namespace kangsw::misc_test {
+
 CUSTOM_INFIX_DEFINE_OPERATOR_DIVIDER(add, *, *);
 CUSTOM_INFIX_DEFINE_OPERATOR_DIVIDER(add, ^, ^);
 CUSTOM_INFIX_DEFINE_OPERATOR_DIVIDER(add, /, /);
@@ -40,3 +42,5 @@ TEST_CASE("infix feature test", "[custom_infix]")
     REQUIRE((1 - add - 2 % add % 3) == 6);
     REQUIRE((3 << mult{} >> 6) == 18);
 }
+
+} // namespace kangsw::misc_test

@@ -44,8 +44,17 @@ TEST_CASE("infix feature test", "[custom_infix]")
 
 TEST_CASE("packed tuple test")
 {
-    impl__::zip_range<int*, double*> fre;
-    fre.begin();
+    auto a = {1, 1, 2};
+    auto b = {2, 3, 3};
+    auto sum = {3, 4, 5};
+    auto tup = zip(a, b, sum);
+
+    for (auto [_0, _1, _2] : tup) {
+        REQUIRE((_0 + _1) == _2);
+    }
+
+    auto c = {1, 3, 4, 5};
+    REQUIRE_THROWS(zip(a, b, c));
 }
 
 } // namespace kangsw::misc_test

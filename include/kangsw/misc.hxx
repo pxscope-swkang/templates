@@ -226,7 +226,7 @@ decltype(auto) recurse_for_each(
         }
     }
     else if constexpr (Policy_ == impl__::recurse_policy_base::postorder) {
-        static_assert(false);
+        static_assert(false); // do it later
     }
     else {
         static_assert(false);
@@ -235,7 +235,7 @@ decltype(auto) recurse_for_each(
 
 namespace impl__ {
 template <typename... Args_>
-class zip_iterator {
+class _zip_iterator {
 public:
     using tuple_type = std::tuple<Args_...>;
     using iterator_category = std::forward_iterator_tag;
@@ -247,14 +247,14 @@ private:
     template <size_t... N_>
     value_type _deref(std::index_sequence<N_...>) const
     {
-        return std::make_tuple(std::ref(*std::get<N_>(iterator_pack_))...);
+        return std::make_tuple(std::ref(*std::get<N_>(pack_))...);
     }
 
     template <size_t N_ = 0>
-    bool _compare_strict(zip_iterator const& op, bool previous)
+    bool _compare_strict(_zip_iterator const& op, bool previous) const
     {
-        if constexpr (N_ != sizeof...(Args_)) {
-            auto result = std::get<N_>(op) == std::get<N_>(iterator_pack_);
+        if constexpr (N_ < sizeof...(Args_)) {
+            auto result = std::get<N_>(op.pack_) == std::get<N_>(pack_);
             if (result != previous) {
                 throw std::invalid_argument("packed tuples has difference lengths");
             }
@@ -267,18 +267,19 @@ private:
     }
 
 public:
-    bool operator==(zip_iterator const& op) const
+    bool operator==(_zip_iterator const& op) const
     {
-        return _compare_strict(op, std::get<0>(op) == std::get<0>(iterator_pack_));
+        return _compare_strict(op, std::get<0>(op.pack_) == std::get<0>(pack_));
     }
+    bool operator!=(_zip_iterator const& op) const { return !(*this == op); }
 
-    zip_iterator& operator++()
+    _zip_iterator& operator++()
     {
-        std::apply([](auto&&... arg) { (++arg, ...); }, iterator_pack_);
+        std::apply([](auto&&... arg) { (++arg, ...); }, pack_);
         return *this;
     }
 
-    zip_iterator operator++(int)
+    _zip_iterator operator++(int)
     {
         auto copy = *this;
         return ++*this, copy;
@@ -290,21 +291,53 @@ public:
     }
 
 public:
-    tuple_type iterator_pack_;
+    tuple_type pack_;
 };
 
 template <typename... Args_>
-class zip_range {
+class _zip_range {
 public:
     using tuple_type = std::tuple<Args_...>;
+    using iterator = _zip_iterator<Args_...>;
+    using const_iterator = _zip_iterator<Args_...>;
 
-    zip_iterator<Args_...> begin() const { return {begin_}; }
-    zip_iterator<Args_...> end() const { return {end_}; }
+    _zip_iterator<Args_...> begin() const { return {begin_}; }
+    _zip_iterator<Args_...> end() const { return {end_}; }
+    size_t size() const { return size_; }
 
 public:
     tuple_type begin_;
     tuple_type end_;
+    size_t size_;
 };
+
+template <typename Ty_, typename... Ph_>
+decltype(auto) _container_size(Ty_&& container, Ph_...)
+{
+    return container.size();
+}
+
 } // namespace impl__
+
+/**
+ * iterable한 컨테이너들을 하나로 묶습니다.
+ */
+template <typename... Containers_>
+decltype(auto) zip(Containers_&&... containers)
+{
+    auto begin = std::make_tuple(containers.begin()...);
+    auto end = std::make_tuple(containers.end()...);
+
+    if ((containers.size() != ...)) {
+        throw std::invalid_argument("container size does not match!");
+    }
+
+    auto size = impl__::_container_size(containers...);
+    impl__::_zip_range<decltype(containers.begin())...> zips;
+    zips.begin_ = begin;
+    zips.end_ = end;
+    zips.size_ = size;
+    return zips;
+}
 
 } // namespace kangsw

@@ -330,12 +330,12 @@ decltype(auto) zip(Containers_&&... containers)
 {
     auto begin = std::make_tuple(containers.begin()...);
     auto end = std::make_tuple(containers.end()...);
+    auto size = impl__::_container_size(containers...);
 
-    if ((containers.size() != ...)) {
+    if (((size != containers.size()) || ...)) {
         throw std::invalid_argument("container size does not match!");
     }
 
-    auto size = impl__::_container_size(containers...);
     impl__::_zip_range<decltype(containers.begin())...> zips;
     zips.begin_ = begin;
     zips.end_ = end;

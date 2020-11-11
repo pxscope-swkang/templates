@@ -42,6 +42,8 @@ TEST_CASE("infix feature test", "[custom_infix]")
     REQUIRE((3 << mult{} >> 6) == 18);
 }
 
+namespace sk = kangsw;
+
 TEST_CASE("packed tuple test")
 {
     auto a = {1, 1, 2};
@@ -53,6 +55,7 @@ TEST_CASE("packed tuple test")
         REQUIRE((_0 + _1) == _2);
     }
 
+    zip(il({1, 2, 3}));
     auto c = {1, 3, 4, 5};
     REQUIRE_THROWS(zip(a, b, c));
 }

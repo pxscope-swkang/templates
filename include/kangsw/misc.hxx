@@ -319,6 +319,9 @@ decltype(auto) _container_size(Ty_&& container, Ph_...)
 
 } // namespace impl__
 
+template <typename Ty_>
+decltype(auto) il(std::initializer_list<Ty_> v) { return v; }
+
 /**
  * iterable한 컨테이너들을 하나로 묶습니다.
  */

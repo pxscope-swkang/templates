@@ -19,17 +19,17 @@ public:
     using pointer = Ty_*;
 
 public:
-    counter_base()
+    counter_base() noexcept
         : count_(0)
     {
         ;
     }
-    counter_base(Ty_ rhs)
+    counter_base(Ty_ rhs) noexcept
         : count_(rhs)
     {
         ;
     }
-    counter_base(counter_base const& rhs)
+    counter_base(counter_base const& rhs) noexcept
         : count_(rhs.count_)
     {
         ;
@@ -63,16 +63,22 @@ private:
 template <typename Ty_>
 class counter_range_base {
 public:
-    counter_range_base(Ty_ min, Ty_ max)
+    counter_range_base(Ty_ min, Ty_ max) noexcept
         : min_(min)
         , max_(max)
-    {}
+    {
+        if (min_ > max_) {
+            std::swap(min_, max_);
+        }
+    }
 
-    counter_range_base(Ty_ max)
+    counter_range_base(Ty_ max) noexcept
         : min_(Ty_{})
         , max_(max)
     {
-        assert(min_ < max_);
+        if (min_ > max_) {
+            std::swap(min_, max_);
+        }
     }
 
     counter_base<Ty_> begin() const { return min_; }
@@ -84,11 +90,13 @@ private:
     Ty_ min_, max_;
 };
 
-using counter = counter_base<size_t>;
-using counter_range = counter_range_base<size_t>;
+using counter = counter_base<int64_t>;
+using counter_range = counter_range_base<int64_t>;
 
-// Executes for_each with given parallel execution policy. However, it provides current partition index within given callback.
-// It is recommended to set num_partitions as same as current thread count, however, it is not forced.
+/**
+ * Executes for_each with given parallel execution policy. However, it provides current partition index within given callback.
+ * It is recommended to set num_partitions as same as current thread count.
+ */
 template <typename It_, typename Fn_, typename ExPo_>
 void for_each_partition(ExPo_&&, It_ first, It_ last, Fn_&& cb, size_t num_partitions = std::thread::hardware_concurrency())
 {
@@ -109,9 +117,36 @@ void for_each_partition(ExPo_&&, It_ first, It_ last, Fn_&& cb, size_t num_parti
           std::advance(end = it, steps * (partition_index + 1) <= num_elems ? steps : num_elems - steps * partition_index);
 
           for (; it != end; ++it) {
-              cb(*it, partition_index);
+              if constexpr (std::is_invocable_v<Fn_, decltype(*it)>) {
+                  cb(*it);
+              }
+              else if constexpr (std::is_invocable_v<Fn_, decltype(*it), size_t /*partition*/>) {
+                  cb(*it, partition_index);
+              }
+              else {
+                  static_assert(false, "given callback has invalid signature");
+              }
           }
       });
+}
+
+/**
+ * convenient helper method for for_reach_partition
+ */
+template <typename ExPo_, typename Fn_>
+void for_each_indexes(ExPo_&&, int64_t begin, int64_t end, Fn_&& cb, size_t num_partitions = std::thread::hardware_concurrency())
+{
+    if (begin < end) { throw std::invalid_argument("end precedes begin"); }
+
+    counter_range range(begin, end);
+    for_each_partition(ExPo_{}, range.begin(), range.end(), std::forward<Fn_>(cb), num_partitions);
+}
+
+template <typename ExPo_, typename Fn_>
+void for_each_indexes(int64_t begin, int64_t end, Fn_&& cb)
+{
+    counter_range range(begin, end);
+    std::for_each(range.begin(), range.end(), std::forward<Fn_>(cb));
 }
 
 template <typename Mutex_>

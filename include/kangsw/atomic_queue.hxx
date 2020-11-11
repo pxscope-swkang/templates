@@ -84,7 +84,7 @@ private:
 } // namespace LOCK_FREE_CIRCULAR_DEPRECATED__
 inline namespace LOCK__ {
 template <typename Ty_>
-class safe_queue {
+class atomic_queue {
 public:
     using element_type = Ty_;
     using difference_type = std::ptrdiff_t;
@@ -92,7 +92,7 @@ public:
     using write_lock_type = std::lock_guard<std::shared_mutex>;
 
 public:
-    safe_queue(size_t capacity)
+    atomic_queue(size_t capacity)
         : queue_()
     {
     }

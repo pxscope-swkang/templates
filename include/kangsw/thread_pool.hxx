@@ -7,7 +7,7 @@
 #include <shared_mutex>
 #include <thread>
 #include <type_traits>
-#include "safe_queue.hxx"
+#include "atomic_queue.hxx"
 
 namespace kangsw {
 class thread_pool_exception : public std::exception {
@@ -157,7 +157,7 @@ private:
     };
 
 private:
-    safe_queue<task_t> tasks_;
+    atomic_queue<task_t> tasks_;
     std::vector<worker_t> workers_;
     mutable std::shared_mutex worker_lock_;
 

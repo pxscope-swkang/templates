@@ -145,23 +145,6 @@ void for_each_indexes(int64_t begin, int64_t end, Fn_&& cb)
     std::for_each(range.begin(), range.end(), std::forward<Fn_>(cb));
 }
 
-template <typename Mutex_>
-decltype(auto) lock_read(Mutex_& m)
-{
-    if constexpr (std::is_same<Mutex_, std::mutex>::value) {
-        return std::unique_lock<Mutex_>{m};
-    }
-    else {
-        return std::shared_lock<Mutex_>{m};
-    }
-}
-
-template <typename Mutex_>
-decltype(auto) lock_write(Mutex_& m)
-{
-    return std::unique_lock<Mutex_>{m};
-}
-
 template <typename... Args_>
 std::string format_string(char const* fmt, Args_&&... args)
 {

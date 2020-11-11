@@ -1,16 +1,16 @@
-#include <kangsw/safe_queue.hxx>
 #include <string>
 #include <thread>
 #define CATCH_CONFIG_ENABLE_BENCHMARKING
 #include "catch.hpp"
+#include "kangsw/atomic_queue.hxx"
 
 namespace kangsw::container_test::queue {
 TEST_CASE("Queue basic operations", "[lock_free_queue]")
 {
-    using kangsw::safe_queue;
+    using kangsw::atomic_queue;
     using std::string;
     size_t num_case = 128;
-    safe_queue<string> queue{num_case};
+    atomic_queue<string> queue{num_case};
     size_t num_fails = 0;
 
     REQUIRE(queue.empty());
@@ -43,7 +43,7 @@ TEST_CASE("Queue basic operations", "[lock_free_queue]")
 
 TEST_CASE("Queue async operations", "[lock_free_queue]")
 {
-    using kangsw::safe_queue;
+    using kangsw::atomic_queue;
     using std::thread;
     using std::vector;
     using namespace std::chrono_literals;
@@ -56,7 +56,7 @@ TEST_CASE("Queue async operations", "[lock_free_queue]")
     vector<char> destinations;
     vector<thread> writers;
     vector<thread> readers;
-    safe_queue<size_t> queue{queue_capacity};
+    atomic_queue<size_t> queue{queue_capacity};
 
     destinations.resize(num_case * num_thr_wr);
     std::atomic_bool do_read = true;

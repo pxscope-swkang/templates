@@ -1,7 +1,8 @@
-#include "catch.hpp"
 #include <kangsw/safe_queue.hxx>
 #include <string>
 #include <thread>
+#define CATCH_CONFIG_ENABLE_BENCHMARKING
+#include "catch.hpp"
 
 namespace kangsw::container_test::queue {
 TEST_CASE("Queue basic operations", "[lock_free_queue]")
@@ -99,6 +100,7 @@ TEST_CASE("Queue async operations", "[lock_free_queue]")
 
     for (auto& thr : writers) { thr.join(); }
     for (auto& thr : readers) { thr.join(); }
+
     std::chrono::duration<double> elapsed = std::chrono::system_clock::now() - elapse_begin;
     printf("Processing %llu element queue: %f seconds\n", num_case, elapsed.count());
 
@@ -108,5 +110,5 @@ TEST_CASE("Queue async operations", "[lock_free_queue]")
     CHECK(read_count == destinations.size());
     CHECK(zero_cnt == 0);
     CHECK((destinations.size() - not_one_count) == 0);
-}
+} // namespace kangsw::container_test::queue
 } // namespace kangsw::container_test::queue

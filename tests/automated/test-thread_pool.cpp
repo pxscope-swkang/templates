@@ -9,7 +9,7 @@ using namespace kangsw;
 using namespace std;
 namespace kangsw::thread_pool_test {
 constexpr int num_cases = 256;
-TEST_CASE("thread pool default operation")
+TEST_CASE("[timer_thread_pool] thread pool default operation")
 {
     printf("<< THREAD POOL TEST >>");
     for (int ITER = 1; ITER; ITER--) {
@@ -105,7 +105,46 @@ TEST_CASE("thread pool default operation")
     cout << '\n';
 }
 
-TEST_CASE("Timer accuracy test")
+TEST_CASE("[timer_thread_pool] Timer accuracy test")
 {
+    using namespace std::chrono;
+
+    static constexpr int NUM_CASE = 38464;
+    timer_thread_pool workers;
+
+    vector<system_clock::duration> errors = {};
+    errors.resize(NUM_CASE);
+
+    std::for_each(
+      std::execution::par_unseq, errors.begin(), errors.end(),
+      [&](system_clock::duration& error_dest) {
+          auto delay = 200us * (rand() % 1000);
+          auto issue = system_clock::now();
+
+          workers.add_timer(delay, [&error_dest, delay, issue]() {
+              error_dest = (system_clock::now() - issue) - delay;
+          });
+      });
+
+    std::this_thread::sleep_for(500ms);
+    std::sort(errors.begin(), errors.end());
+    auto percent_5 = NUM_CASE * 5 / 100;
+    auto avg_err = std::reduce(errors.begin(), errors.end()) / NUM_CASE;
+    auto min_v = std::reduce(errors.begin(), errors.begin() + percent_5) / percent_5;
+    auto max_v = std::reduce(errors.end() - percent_5, errors.end()) / percent_5;
+
+    auto to_micro = [](auto value) { return duration<double, std::micro>(value).count(); };
+    auto min_mult_by_N = (to_micro(min_v) * NUM_CASE);
+    auto max_div_by_N = to_micro(max_v) / NUM_CASE;
+    INFO("Num Case        : " << NUM_CASE);
+    INFO("Average Error Is: " << to_micro(avg_err) << " us");
+    INFO("Min Error       : " << to_micro(min_v) << " us");
+    INFO("Max Div by N    : " << max_div_by_N << " us");
+    INFO("Average Wait    : " << to_micro(workers.average_wait()) << " us");
+    INFO("Max Error       : " << to_micro(max_v) << " us");
+    INFO("Min Mult by N   : " << min_mult_by_N << " us");
+    CAPTURE(percent_5);
+    CAPTURE(workers.num_workers());
+    REQUIRE(to_micro(min_v) < 500);
 }
 } // namespace kangsw::thread_pool_test

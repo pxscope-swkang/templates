@@ -12,6 +12,8 @@ CUSTOM_INFIX_DEFINE_OPERATOR_DIVIDER(add, -, -);
 CUSTOM_INFIX_DEFINE_OPERATOR_DIVIDER(add, &, &);
 CUSTOM_INFIX_DEFINE_OPERATOR_DIVIDER(add, <, >);
 CUSTOM_INFIX_DEFINE_OPERATOR_DIVIDER(add, >, <);
+CUSTOM_INFIX_DEFINE_OPERATOR_DIVIDER(add, >>, <<);
+CUSTOM_INFIX_DEFINE_OPERATOR_DIVIDER(add, <<, >>);
 CUSTOM_INFIX_DEFINE_OPERATOR_DIVIDER(add, %, %);
 CUSTOM_INFIX_DEFINE_NEW_OPERATOR(add, l, r)
 {
@@ -39,7 +41,7 @@ TEST_CASE("infix feature test", "[custom_infix]")
     REQUIRE((1 < add > 2 < add > 3) == 6);
     REQUIRE((1 % add % 2 % add % 3) == 6);
     REQUIRE((1 - add - 2 % add % 3) == 6);
-    REQUIRE((3 << mult{} >> 6) == 18);
+    REQUIRE((3 / mult{} / 6) == 18);
 }
 
 namespace sk = kangsw;

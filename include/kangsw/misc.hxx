@@ -343,4 +343,12 @@ decltype(auto) zip(Containers_&&... containers)
     return zips;
 }
 
+/**
+ * parameter pack의 N번째 argument를 얻습니다.
+ */
+template <size_t N, typename... Args>
+decltype(auto) get_pack_element(Args&&... as) noexcept
+{
+    return std::get<N>(std::forward_as_tuple(std::forward<Args>(as)...));
+}
 } // namespace kangsw

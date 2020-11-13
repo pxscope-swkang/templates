@@ -106,7 +106,7 @@ TEST_CASE("thread pool default operation", "[.]")
     cout << '\n';
 }
 
-TEST_CASE("Timer accuracy test")
+TEST_CASE("Timer accuracy test", "[.]")
 {
     using namespace std::chrono;
 

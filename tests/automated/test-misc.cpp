@@ -1,3 +1,5 @@
+#include <winerror.h>
+
 #include "catch.hpp"
 #include "kangsw/infix_macros.hxx"
 #include "kangsw/misc.hxx"
@@ -62,4 +64,24 @@ TEST_CASE("packed tuple test")
     REQUIRE_THROWS(zip(a, b, c));
 }
 
+TEST_CASE("constexpr hashing")
+{
+    bool check = false;
+    switch (fnv1a("hell, world!")) {
+    case fnv1a("hell, world!"):
+        check = true;
+        break;
+
+    default: break;
+    }
+
+    switch (fnv1a("hell, world!")) {
+    case fnv1a("other str"):
+        FAIL("Hash not match");
+        break;
+    default:;
+    }
+
+    REQUIRE(check);
+}
 } // namespace kangsw::misc_test

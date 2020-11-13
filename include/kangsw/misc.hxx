@@ -351,4 +351,26 @@ decltype(auto) get_pack_element(Args&&... as) noexcept
 {
     return std::get<N>(std::forward_as_tuple(std::forward<Args>(as)...));
 }
+
+/**
+ * 64-bit compile-time hash
+ * @see https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
+ */
+namespace impl__ {
+constexpr uint64_t fnv1a_impl(char const* s, char const* end)
+{
+    constexpr uint64_t PRIME = 0x100000001b3;
+    constexpr uint64_t OFFSET = 0xcbf29ce484222325;
+    uint64_t hash = OFFSET; // magic number
+
+    for (; *s; ++s) { hash = (hash ^ *s) * PRIME; }
+    return hash;
+}
+} // namespace impl__
+constexpr uint64_t fnv1a(char const* str)
+{
+    char const* h = str;
+    for (; *h; ++h) {}
+    return impl__::fnv1a_impl(str, h);
+}
 } // namespace kangsw

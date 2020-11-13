@@ -1,6 +1,5 @@
-#include <winerror.h>
-
 #include "catch.hpp"
+#include "kangsw/index.hxx"
 #include "kangsw/infix_macros.hxx"
 #include "kangsw/misc.hxx"
 
@@ -66,13 +65,13 @@ TEST_CASE("packed tuple test")
 
 TEST_CASE("constexpr hashing")
 {
-    bool check = false;
     switch (fnv1a("hell, world!")) {
     case fnv1a("hell, world!"):
-        check = true;
         break;
 
-    default: break;
+    default:
+        FAIL("hash didn't work!");
+        break;
     }
 
     switch (fnv1a("hell, world!")) {
@@ -82,6 +81,17 @@ TEST_CASE("constexpr hashing")
     default:;
     }
 
-    REQUIRE(check);
+    hash_index index_a("hell, world!");
+    constexpr hash_index index_b("hell, world!");
+
+    switch (index_a) {
+    case index_b: break;
+    default: FAIL("index didn't work!");
+    }
+
+    switch (hash_index(std::string("hell, world!"))) {
+    case index_b: break;
+    default: FAIL("index didn't match!");
+    }
 }
 } // namespace kangsw::misc_test

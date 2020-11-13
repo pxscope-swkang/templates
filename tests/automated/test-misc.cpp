@@ -5,34 +5,45 @@
 
 namespace kangsw::misc_test {
 
-CUSTOM_INFIX_DEFINE_OPERATOR_DIVIDER(add, *, *);
-CUSTOM_INFIX_DEFINE_OPERATOR_DIVIDER(add, ^, ^);
-CUSTOM_INFIX_DEFINE_OPERATOR_DIVIDER(add, /, /);
-CUSTOM_INFIX_DEFINE_OPERATOR_DIVIDER(add, |, |);
-CUSTOM_INFIX_DEFINE_OPERATOR_DIVIDER(add, -, -);
-CUSTOM_INFIX_DEFINE_OPERATOR_DIVIDER(add, &, &);
-CUSTOM_INFIX_DEFINE_OPERATOR_DIVIDER(add, <, >);
-CUSTOM_INFIX_DEFINE_OPERATOR_DIVIDER(add, >, <);
-CUSTOM_INFIX_DEFINE_OPERATOR_DIVIDER(add, >>, <<);
-CUSTOM_INFIX_DEFINE_OPERATOR_DIVIDER(add, <<, >>);
-CUSTOM_INFIX_DEFINE_OPERATOR_DIVIDER(add, %, %);
-CUSTOM_INFIX_DEFINE_NEW_OPERATOR(add, l, r)
+DEFINE_NEW_INFIX_OPR(add, *, *);
+DEFINE_NEW_INFIX_OPR(add, ^, ^);
+DEFINE_NEW_INFIX_OPR(add, /, /);
+DEFINE_NEW_INFIX_OPR(add, |, |);
+DEFINE_NEW_INFIX_OPR(add, -, -);
+DEFINE_NEW_INFIX_OPR(add, &, &);
+DEFINE_NEW_INFIX_OPR(add, <, >);
+DEFINE_NEW_INFIX_OPR(add, >, <);
+DEFINE_NEW_INFIX_OPR(add, >>, <<);
+DEFINE_NEW_INFIX_OPR(add, <<, >>);
+DEFINE_NEW_INFIX_OPR(add, %, %);
+DEFINE_NEW_INFIX(add, l, r)
 {
     return l + r;
 }
-#define IX_ADD % add %
 
-struct mult : kangsw::infix::base<mult> {
-    template <typename L_, typename R_>
-    decltype(auto) operator()(L_ const& l, R_ const& r) const
-    {
-        return l * r;
-    }
-};
+DEFINE_NEW_INFIX_OPR_WITH_DEST(multiply, <<, <<);
+DEFINE_NEW_INFIX_OPR_WITH_DEST(multiply, >>, >>);
+DEFINE_NEW_INFIX_OPR_WITH_DEST(multiply, -, -);
+DEFINE_NEW_INFIX_OPR_WITH_DEST(multiply, |, |);
+DEFINE_NEW_INFIX_WITH_DEST(multiply, d, l, r)
+{
+    d = (float)l * r;
+}
+
+namespace ns {
+
+DEFINE_NEW_INFIX_OPR_WITH_DEST(multiply, >>, >>);
+DEFINE_NEW_INFIX_OPR_WITH_DEST(multiply, -, -);
+DEFINE_NEW_INFIX_OPR_WITH_DEST(multiply, |, |);
+DEFINE_NEW_INFIX_WITH_DEST(multiply, d, l, r)
+{
+    d = (float)l * r;
+}
+
+} // namespace ns
 
 TEST_CASE("infix feature test", "[custom_infix]")
 {
-    REQUIRE((1 IX_ADD 2) == 3);
     REQUIRE((1 ^ add ^ 2) == 3);
     REQUIRE((1 / add / 2) == 3);
     REQUIRE((1 | add | 2) == 3);
@@ -42,7 +53,16 @@ TEST_CASE("infix feature test", "[custom_infix]")
     REQUIRE((1 < add > 2 < add > 3) == 6);
     REQUIRE((1 % add % 2 % add % 3) == 6);
     REQUIRE((1 - add - 2 % add % 3) == 6);
-    REQUIRE((3 / mult{} / 6) == 18);
+
+    float multed;
+    REQUIRE((3 >> multiply(multed) >> 4) == (3.0f * 4.0f));
+    REQUIRE((3 << multiply(multed) >> 4) == (3.0f * 4.0f));
+    REQUIRE((3 - multiply(multed) >> 4) == (3.0f * 4.0f));
+    REQUIRE((3 - multiply(multed) - 4) == (3.0f * 4.0f));
+    REQUIRE((3 | multiply(multed) | 4) == (3.0f * 4.0f));
+    REQUIRE((3 | ns::multiply(multed) | 4) == (3.0f * 4.0f));
+    REQUIRE((3 | ns::multiply(multed) | 4) == (3.0f * 4.0f));
+    REQUIRE(multed == (3.0f * 4.0f));
 }
 
 namespace sk = kangsw;

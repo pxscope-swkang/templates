@@ -1,7 +1,18 @@
+/*
+ * ----------------------------------------------------------------------------
+ * "THE BEER-WARE LICENSE" (Revision 42):
+ * <ki6080@gmail.com> wrote this file. As long as you retain this notice you
+ * can do whatever you want with this stuff. If we meet some day, and you think
+ * this stuff is worth it, you can buy me a beer in return.      Seungwoo Kang.
+ * ----------------------------------------------------------------------------
+ */
+#pragma once
+#include <stdexcept>
+#include <tuple>
+
 /**
  * Zip functionality
  *
- * @file zip.hxx
  * @details
  * @code{.cpp}
     auto a = {1, 2, 3};
@@ -12,10 +23,6 @@
     }
  * @endcode 
  */
-#pragma once
-#include <stdexcept>
-#include <tuple>
-
 namespace kangsw {
 namespace impl__ {
 template <typename... Args_>

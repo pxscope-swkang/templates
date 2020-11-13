@@ -7,7 +7,7 @@
     auto a = {1, 2, 3};
     auto b = {1.0, 2.0, 3.0};
     auto c = {"hello", "world", "!"};
-    for(auto& [num0, num1, str] : kangsw::zip(a, b, c)}{
+    for(auto [num0, num1, str] : kangsw::zip(a, b, c)}{
         // zip(A, B, C) returns tuple<A::reference, B::reference, C::reference>
     }
  * @endcode 

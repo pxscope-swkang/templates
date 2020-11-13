@@ -1,6 +1,6 @@
 #include "catch.hpp"
 #include "kangsw/hash_index.hxx"
-#include "kangsw/infix_macros.hxx"
+#include "kangsw/infix.hxx"
 #include "kangsw/misc.hxx"
 
 namespace kangsw::misc_test {

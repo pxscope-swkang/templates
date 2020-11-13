@@ -1,5 +1,5 @@
 #include "catch.hpp"
-#include "kangsw/index.hxx"
+#include "kangsw/hash_index.hxx"
 #include "kangsw/infix_macros.hxx"
 #include "kangsw/misc.hxx"
 

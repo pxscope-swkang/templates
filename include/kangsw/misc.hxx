@@ -253,7 +253,7 @@ constexpr uint64_t fnv1a_impl(char const* s, char const* end)
     constexpr uint64_t OFFSET = 0xcbf29ce484222325;
     uint64_t hash = OFFSET; // magic number
 
-    for (; *s; ++s) { hash = (hash ^ *s) * PRIME; }
+    for (; s != end; ++s) { hash = (hash ^ *s) * PRIME; }
     return hash;
 }
 } // namespace impl__

@@ -1,14 +1,11 @@
 #pragma once
+#include <string_view>
 #include "misc.hxx"
 
 namespace kangsw {
 struct hash_index {
 public:
-    hash_index(std::string const& str)
-        : hash(fnv1a(str.c_str()))
-    {}
-
-    hash_index(std::string_view const& str)
+    hash_index(std::string_view str)
         : hash(impl__::fnv1a_impl(str.data(), str.data() + str.size()))
     {}
 
@@ -24,7 +21,7 @@ public:
     constexpr bool operator<(hash_index const& o) const { return o.hash < hash; }
 
 public:
-    std::string_view const name = nullptr;
+    std::string_view const name = {};
     size_t const hash;
 };
 

@@ -271,4 +271,20 @@ constexpr uint64_t fnv1a(char const* str) {
     for (; *h; ++h) {}
     return impl__::fnv1a_impl(str, h);
 }
+
+class ownership {
+public:
+    ownership(bool owning = true) :
+        owning_(owning) {}
+
+    ownership(ownership const&) = delete;
+    ownership(ownership&& r) noexcept { *this = std::move(r); };
+    ownership& operator=(ownership const&) = delete;
+    ownership& operator=(ownership&& r) noexcept { return owning_ = r.owning_, r.owning_ = false, *this; };
+
+    operator bool() { return owning_; }
+
+private:
+    bool owning_ = false;
+};
 } // namespace kangsw

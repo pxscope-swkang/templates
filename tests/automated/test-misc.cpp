@@ -141,4 +141,23 @@ TEST_CASE("safe string table") {
     default: FAIL("hash not match");
     }
 }
+
+struct owner {
+    inline static int callcnt_ = 0;
+    owner& operator=(owner&&) = default;
+    ~owner() {
+        if (v) callcnt_++;
+    }
+
+    ownership v = true;
+};
+
+TEST_CASE("ownership") {
+    {
+        owner a, b, c;
+        a = std::move(b);
+        a = std::move(c);
+    }
+    REQUIRE(owner::callcnt_ == 1);
+}
 } // namespace kangsw::misc_test

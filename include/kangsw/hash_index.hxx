@@ -14,11 +14,11 @@
 namespace kangsw {
 struct hash_index {
 public:
-    constexpr hash_index(std::string_view str) :
+    constexpr hash_index(std::string_view str) noexcept :
         hash(impl__::fnv1a_impl(str.data(), str.data() + str.size())) {}
 
     template <size_t N>
-    constexpr hash_index(char const (&str)[N]) :
+    constexpr hash_index(char const (&str)[N]) noexcept :
         hash(fnv1a(str)) {}
 
     // template <typename Ty_>
@@ -54,7 +54,7 @@ class safe_string_table {
 public:
     struct _hash_pack {
         template <size_t N>
-        constexpr _hash_pack(char const (&str)[N]) :
+        constexpr _hash_pack(char const (&str)[N]) noexcept :
             hidx_(str), str_(str) {}
 
     private:

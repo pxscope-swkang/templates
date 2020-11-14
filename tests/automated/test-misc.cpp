@@ -114,7 +114,7 @@ TEST_CASE("constexpr hashing") {
     }
 
     std::string fr = "hell, world!";
-    switch (hash_index(fr)) {
+    switch ((size_t)hash_index(fr)) {
     case index_b: break;
     default: FAIL("index didn't match!");
     }

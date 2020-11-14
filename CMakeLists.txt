@@ -9,5 +9,5 @@ target_include_directories(kangsw_templates INTERFACE "${CMAKE_CURRENT_SOURCE_DI
 aux_source_directory("tests/automated" TEMPLATES_AUTOMATED_TEST_SOURCE)
 
 add_executable(automated_test ${TEMPLATES_AUTOMATED_TEST_SOURCE})
-target_compile_features(automated_test PUBLIC cxx_std_20)
 target_link_libraries(automated_test kangsw_templates)
+target_compile_features(automated_test PUBLIC cxx_std_20)

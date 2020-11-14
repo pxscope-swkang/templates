@@ -41,7 +41,7 @@ public:
     constexpr bool operator!=(hash_index const& o) const { return o.hash_ != hash_; }
     constexpr bool operator<(hash_index const& o) const { return o.hash_ < hash_; }
 
-    constexpr operator bool() const { return hash_ == -1; }
+    constexpr bool is_valid() const { return hash_ == -1; }
 
 public:
     size_t hash() const { return hash_; }

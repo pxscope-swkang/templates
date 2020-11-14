@@ -9,10 +9,13 @@
 #pragma once
 #include <shared_mutex>
 #include <string_view>
+#include <system_error>
 #include <unordered_map>
 #include "misc.hxx"
 
 namespace kangsw {
+class safe_string_table;
+
 struct hash_index {
 public:
     constexpr hash_index(std::string_view str) noexcept :
@@ -22,9 +25,10 @@ public:
     constexpr hash_index(char const (&str)[N]) noexcept :
         hash(fnv1a(str)) {}
 
-    // template <typename Ty_>
-    // constexpr hash_index(Ty_&& v) :
-    //     hash(impl__::fnv1a_impl((char const*)&v, (char const*)&v + sizeof v)) {}
+    constexpr hash_index(size_t value) noexcept :
+        hash(value) {}
+
+    template <size_t Hash_> hash_index static from_constant() { return hash_index(Hash_); }
 
 public:
     constexpr operator size_t() const { return hash; }
@@ -36,10 +40,28 @@ public:
     size_t const hash;
 };
 
+inline namespace literals {
 constexpr auto operator""_hash(char const* str, size_t n) {
     return hash_index({str, n});
 }
 
+struct hash_pack {
+    template <size_t N>
+    constexpr hash_pack(const char (&o)[N]) :
+        first(o), second(o) {}
+
+    constexpr hash_pack(const char* o) :
+        first(o), second(o) {}
+
+    hash_index const first;
+    const char* second;
+};
+
+constexpr auto operator""_hp(char const* str, size_t n) {
+    return hash_pack(str);
+}
+
+} // namespace literals
 } // namespace kangsw
 
 template <>
@@ -52,18 +74,6 @@ namespace kangsw {
  * hash_index로부터 이름을 빌드하기 위한 함수성
  */
 class safe_string_table {
-public:
-    struct _hash_pack {
-        template <size_t N>
-        constexpr _hash_pack(char const (&str)[N]) noexcept :
-            hidx_(str), str_(str) {}
-
-    private:
-        friend safe_string_table;
-        hash_index hidx_;
-        char const* str_;
-    };
-
 public:
     std::string_view operator[](hash_index hash) const {
         std::shared_lock _0(lock_);
@@ -91,8 +101,14 @@ public:
         return table_.try_emplace(hash, std::forward<Str_>(val)).first->second;
     }
 
-    std::pair<hash_index, std::string_view> operator()(_hash_pack hpack) {
-        return {hpack.hidx_, push(hpack.hidx_, hpack.str_)};
+    template <size_t N>
+    std::pair<hash_index, std::string_view> operator()(char const (&str)[N]) {
+        hash_index hsx(str);
+        return {hsx, push(hsx, str)};
+    }
+
+    std::pair<hash_index, std::string_view> operator()(hash_pack p) {
+        return {p.first, push(p.first, p.second)};
     }
 
 private:

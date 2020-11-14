@@ -6,6 +6,8 @@
  * this stuff is worth it, you can buy me a beer in return.      Seungwoo Kang.
  * ----------------------------------------------------------------------------
  */
+#include <algorithm>
+
 #include "catch.hpp"
 #include "kangsw/hash_index.hxx"
 #include "kangsw/infix.hxx"
@@ -116,14 +118,11 @@ TEST_CASE("constexpr hashing") {
     case index_b: break;
     default: FAIL("index didn't match!");
     }
-
-    char local[] = "hell, world!";
-    hash_index sd(local);
 }
 
 TEST_CASE("safe string table") {
     safe_string_table table;
-    auto [index_a, str_gen] = table("hello, world!");
+    auto [index_a, str_gen] = table("hello, world!"_hp);
 
     switch (index_a) {
     case "hello, world!"_hash:
@@ -133,7 +132,8 @@ TEST_CASE("safe string table") {
     default: FAIL("hash not match: " << format("from map: %8llu --> UDL: %8llu", index_a.hash, "hello, world!"_hash.hash));
     }
 
-    auto [index_b, str_gen2] = table("hell, world!");
+    constexpr auto idx = "hell, world!"_hp;
+    auto [index_b, str_gen2] = table(idx);
     REQUIRE(str_gen == "hello, world!"); // check if existing string was invalidated
 
     switch (index_b) {

@@ -9,6 +9,7 @@
 #pragma once
 #include <shared_mutex>
 #include <string_view>
+#include <unordered_map>
 #include "misc.hxx"
 
 namespace kangsw {

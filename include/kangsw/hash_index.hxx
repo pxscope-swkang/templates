@@ -13,13 +13,13 @@
 namespace kangsw {
 struct hash_index {
 public:
-    hash_index(std::string_view str)
+    constexpr hash_index(std::string_view str)
         : hash(impl__::fnv1a_impl(str.data(), str.data() + str.size()))
     {}
 
-    constexpr hash_index(char const* str)
-        : name(str)
-        , hash(fnv1a(str))
+    template <size_t N>
+    constexpr hash_index(char const (&str)[N])
+        : hash(fnv1a(str))
     {}
 
 public:
@@ -29,7 +29,6 @@ public:
     constexpr bool operator<(hash_index const& o) const { return o.hash < hash; }
 
 public:
-    std::string_view const name = {};
     size_t const hash;
 };
 

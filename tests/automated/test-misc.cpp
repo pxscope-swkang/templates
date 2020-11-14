@@ -122,5 +122,8 @@ TEST_CASE("constexpr hashing")
     case index_b: break;
     default: FAIL("index didn't match!");
     }
+
+    char local[] = "hell, world!";
+    hash_index sd(local);
 }
 } // namespace kangsw::misc_test

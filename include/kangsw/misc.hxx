@@ -14,6 +14,14 @@
 #include "zip.hxx"
 
 namespace kangsw {
+/**
+ * @see https://stackoverflow.com/questions/55288555/c-check-if-statement-can-be-evaluated-constexpr
+ * evaluates given expression can be constexpr
+ */
+template <class Lambda, int = (Lambda{}(), 0)>
+constexpr bool is_constexpr(Lambda) { return true; }
+constexpr bool is_constexpr(...) { return false; }
+
 template <typename Ty_>
 // requires std::is_arithmetic_v<Ty_>&& std::is_integral_v<Ty_>
 class counter_base {
@@ -26,15 +34,18 @@ public:
 
 public:
     counter_base() noexcept
-        : count_(0) {
+        :
+        count_(0) {
         ;
     }
     counter_base(Ty_ rhs) noexcept
-        : count_(rhs) {
+        :
+        count_(rhs) {
         ;
     }
     counter_base(counter_base const& rhs) noexcept
-        : count_(rhs.count_) {
+        :
+        count_(rhs.count_) {
         ;
     }
 
@@ -67,16 +78,18 @@ template <typename Ty_>
 class counter_range_base {
 public:
     counter_range_base(Ty_ min, Ty_ max) noexcept
-        : min_(min)
-        , max_(max) {
+        :
+        min_(min),
+        max_(max) {
         if (min_ > max_) {
             std::swap(min_, max_);
         }
     }
 
     counter_range_base(Ty_ max) noexcept
-        : min_(Ty_{})
-        , max_(max) {
+        :
+        min_(Ty_{}),
+        max_(max) {
         if (min_ > max_) {
             std::swap(min_, max_);
         }

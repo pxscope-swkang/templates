@@ -88,7 +88,7 @@ TEST_CASE("packed tuple test") {
 
 TEST_CASE("constexpr hashing") {
     switch (fnv1a("hell, world!")) {
-    case fnv1a("hell, world!"):
+    case hash_index("hell, world!"):
         break;
 
     default:
@@ -119,5 +119,26 @@ TEST_CASE("constexpr hashing") {
 
     char local[] = "hell, world!";
     hash_index sd(local);
+}
+
+TEST_CASE("safe string table") {
+    safe_string_table table;
+    auto [index_a, str_gen] = table("hello, world!");
+
+    switch (index_a) {
+    case "hello, world!"_hash:
+        REQUIRE(str_gen == "hello, world!");
+        break;
+
+    default: FAIL("hash not match: " << format("from map: %8llu --> UDL: %8llu", index_a.hash, "hello, world!"_hash.hash));
+    }
+
+    auto [index_b, str_gen2] = table("hell, world!");
+    REQUIRE(str_gen == "hello, world!"); // check if existing string was invalidated
+
+    switch (index_b) {
+    case "hell, world!"_hash: break;
+    default: FAIL("hash not match");
+    }
 }
 } // namespace kangsw::misc_test

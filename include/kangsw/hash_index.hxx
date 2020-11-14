@@ -14,12 +14,16 @@
 namespace kangsw {
 struct hash_index {
 public:
-    constexpr hash_index(std::string_view str)
-        : hash(impl__::fnv1a_impl(str.data(), str.data() + str.size())) {}
+    constexpr hash_index(std::string_view str) :
+        hash(impl__::fnv1a_impl(str.data(), str.data() + str.size())) {}
 
     template <size_t N>
-    constexpr hash_index(char const (&str)[N])
-        : hash(fnv1a(str)) {}
+    constexpr hash_index(char const (&str)[N]) :
+        hash(fnv1a(str)) {}
+
+    // template <typename Ty_>
+    // constexpr hash_index(Ty_&& v) :
+    //     hash(impl__::fnv1a_impl((char const*)&v, (char const*)&v + sizeof v)) {}
 
 public:
     constexpr operator size_t() const { return hash; }
@@ -31,10 +35,35 @@ public:
     size_t const hash;
 };
 
+constexpr auto operator""_hash(char const* str, size_t n) {
+    return hash_index({str, n});
+}
+
+} // namespace kangsw
+
+template <>
+struct std::hash<kangsw::hash_index> {
+    size_t operator()(kangsw::hash_index const& i) const noexcept { return i.hash; }
+};
+
+namespace kangsw {
 /**
  * hash_index로부터 이름을 빌드하기 위한 함수성
  */
 class safe_string_table {
+public:
+    struct _hash_pack {
+        template <size_t N>
+        constexpr _hash_pack(char const (&str)[N]) :
+            hidx_(str), str_(str) {}
+
+    private:
+        friend safe_string_table;
+        hash_index hidx_;
+        char const* str_;
+    };
+
+public:
     std::string_view operator[](hash_index hash) const {
         std::shared_lock _0(lock_);
         std::string_view retval = {};
@@ -44,30 +73,30 @@ class safe_string_table {
         return retval;
     }
 
-    void push(hash_index hash, std::string val) {
+    template <typename Str_>
+    std::string_view push(hash_index hash, Str_&& val) {
         // optimistically assumes there is already same hash exists
         {
             std::shared_lock _0(lock_);
             auto found_it = table_.find(hash);
             ;
             if (found_it != table_.end()) {
-                return;
+                return found_it->second;
             }
         }
 
         // if there is no existing entity, takes lock and emplace given hash.
         std::unique_lock _1(lock_);
-        table_.try_emplace(hash, std::move(val));
+        return table_.try_emplace(hash, std::forward<Str_>(val)).first->second;
+    }
+
+    std::pair<hash_index, std::string_view> operator()(_hash_pack hpack) {
+        return {hpack.hidx_, push(hpack.hidx_, hpack.str_)};
     }
 
 private:
     std::unordered_map<hash_index, std::string const> table_;
-    std::shared_mutex lock_;
+    mutable std::shared_mutex lock_;
 };
 
 } // namespace kangsw
-
-template <>
-struct std::hash<kangsw::hash_index> {
-    size_t operator()(kangsw::hash_index const& i) const noexcept { return i.hash; }
-};

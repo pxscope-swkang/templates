@@ -129,7 +129,7 @@ TEST_CASE("safe string table") {
         REQUIRE(str_gen == "hello, world!");
         break;
 
-    default: FAIL("hash not match: " << format("from map: %8llu --> UDL: %8llu", index_a.hash, "hello, world!"_hash.hash));
+    default: FAIL("hash not match: " << format("from map: %8llu --> UDL: %8llu", index_a.hash(), "hello, world!"_hash.hash()));
     }
 
     constexpr auto idx = "hell, world!"_hp;

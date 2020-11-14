@@ -19,25 +19,35 @@ class safe_string_table;
 struct hash_index {
 public:
     constexpr hash_index(std::string_view str) noexcept :
-        hash(impl__::fnv1a_impl(str.data(), str.data() + str.size())) {}
+        hash_(impl__::fnv1a_impl(str.data(), str.data() + str.size())) {}
 
     template <size_t N>
     constexpr hash_index(char const (&str)[N]) noexcept :
-        hash(fnv1a(str)) {}
+        hash_(fnv1a(str)) {}
 
-    constexpr hash_index(size_t value) noexcept :
-        hash(value) {}
+    constexpr hash_index(size_t value = -1) noexcept :
+        hash_(value) {}
+
+    constexpr hash_index(hash_index const&) = default;
+    constexpr hash_index(hash_index&&) = default;
+    constexpr hash_index& operator=(hash_index const&) = default;
+    constexpr hash_index& operator=(hash_index&&) = default;
 
     template <size_t Hash_> hash_index static from_constant() { return hash_index(Hash_); }
 
 public:
-    constexpr operator size_t() const { return hash; }
-    constexpr bool operator==(hash_index const& o) const { return o.hash == hash; }
-    constexpr bool operator!=(hash_index const& o) const { return o.hash != hash; }
-    constexpr bool operator<(hash_index const& o) const { return o.hash < hash; }
+    constexpr operator size_t() const { return hash_; }
+    constexpr bool operator==(hash_index const& o) const { return o.hash_ == hash_; }
+    constexpr bool operator!=(hash_index const& o) const { return o.hash_ != hash_; }
+    constexpr bool operator<(hash_index const& o) const { return o.hash_ < hash_; }
+
+    constexpr operator bool() const { return hash_ == -1; }
 
 public:
-    size_t const hash;
+    size_t hash() const { return hash_; }
+
+private:
+    size_t hash_;
 };
 
 inline namespace literals {
@@ -66,7 +76,7 @@ constexpr auto operator""_hp(char const* str, size_t n) {
 
 template <>
 struct std::hash<kangsw::hash_index> {
-    size_t operator()(kangsw::hash_index const& i) const noexcept { return i.hash; }
+    size_t operator()(kangsw::hash_index const& i) const noexcept { return i.hash(); }
 };
 
 namespace kangsw {

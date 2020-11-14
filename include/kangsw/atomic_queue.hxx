@@ -24,14 +24,12 @@ public:
     safe_queue(size_t capacity)
         : array_elem_(new element_type[capacity + 1])
         , array_occupied_(new std::atomic_bool[capacity + 1])
-        , capacity_(capacity + 1)
-    {
+        , capacity_(capacity + 1) {
         memset(array_occupied_.get(), 0, capacity + 1);
     }
 
     template <typename RTy_>
-    bool try_push(RTy_&& elem)
-    {
+    bool try_push(RTy_&& elem) {
         size_t tail = tail_.load();
         size_t next = (tail + 1) % capacity_;
         if (next == head()) { return false; }
@@ -48,8 +46,7 @@ public:
         return false;
     }
 
-    bool try_pop(Ty_& retval)
-    {
+    bool try_pop(Ty_& retval) {
         size_t head = head_.load();
         size_t next = (head + 1) % capacity_;
         if (head == tail()) { return false; }
@@ -72,8 +69,7 @@ public:
     size_t head() const { return head_.load(); }
     size_t tail() const { return tail_.load(); }
 
-    size_t size() const
-    {
+    size_t size() const {
         size_t head = head_;
         size_t tail = tail_;
 
@@ -101,20 +97,17 @@ public:
 
 public:
     atomic_queue(size_t capacity)
-        : queue_()
-    {
+        : queue_() {
     }
 
     template <typename RTy_>
-    bool try_push(RTy_&& elem)
-    {
+    bool try_push(RTy_&& elem) {
         write_lock_type lock(queue_lock_);
         queue_.emplace_front(std::forward<RTy_>(elem));
         return true;
     }
 
-    bool try_pop(Ty_& retval)
-    {
+    bool try_pop(Ty_& retval) {
         write_lock_type lock(queue_lock_);
         if (queue_.empty()) {
             return false;
@@ -125,8 +118,7 @@ public:
         return true;
     }
 
-    bool empty() const
-    {
+    bool empty() const {
         read_lock_type lock(queue_lock_);
         return queue_.empty();
     }
@@ -135,8 +127,7 @@ public:
     size_t head() const { return 0; }
     size_t tail() const { return 0; }
 
-    size_t size() const
-    {
+    size_t size() const {
         read_lock_type lock(queue_lock_);
         return queue_.size();
     }

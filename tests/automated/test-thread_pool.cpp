@@ -17,8 +17,7 @@
 using namespace kangsw;
 using namespace std;
 namespace kangsw::thread_pool_test {
-TEST_CASE("thread pool default operation", "[.]")
-{
+TEST_CASE("thread pool default operation", "[.]") {
     constexpr int NUM_CASE = 1024;
     printf("<< THREAD POOL TEST >>");
     for (int ITER = 1; ITER; ITER--) {
@@ -114,8 +113,7 @@ TEST_CASE("thread pool default operation", "[.]")
     cout << '\n';
 }
 
-TEST_CASE("Timer accuracy test", "[.]")
-{
+TEST_CASE("Timer accuracy test", "[.]") {
     using namespace std::chrono;
 
     static constexpr int NUM_CASE = 5120;

@@ -23,8 +23,7 @@ public:
     void unlock() { lock_.fetch_sub(1); }
     bool is_locked() const { return lock_.load(); }
 
-    ~destruction_guard()
-    {
+    ~destruction_guard() {
         for (; lock_.load(); std::this_thread::sleep_for(poll_interval)) {}
     }
 

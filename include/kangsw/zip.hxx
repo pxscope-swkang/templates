@@ -36,14 +36,12 @@ public:
 
 private:
     template <size_t... N_>
-    value_type _deref(std::index_sequence<N_...>) const
-    {
+    value_type _deref(std::index_sequence<N_...>) const {
         return std::make_tuple(std::ref(*std::get<N_>(pack_))...);
     }
 
     template <size_t N_ = 0>
-    bool _compare_strict(_zip_iterator const& op, bool previous) const
-    {
+    bool _compare_strict(_zip_iterator const& op, bool previous) const {
         if constexpr (N_ < sizeof...(Args_)) {
             auto result = std::get<N_>(op.pack_) == std::get<N_>(pack_);
             if (result != previous) {
@@ -58,26 +56,22 @@ private:
     }
 
 public:
-    bool operator==(_zip_iterator const& op) const
-    {
+    bool operator==(_zip_iterator const& op) const {
         return _compare_strict(op, std::get<0>(op.pack_) == std::get<0>(pack_));
     }
     bool operator!=(_zip_iterator const& op) const { return !(*this == op); }
 
-    _zip_iterator& operator++()
-    {
+    _zip_iterator& operator++() {
         std::apply([](auto&&... arg) { (++arg, ...); }, pack_);
         return *this;
     }
 
-    _zip_iterator operator++(int)
-    {
+    _zip_iterator operator++(int) {
         auto copy = *this;
         return ++*this, copy;
     }
 
-    value_type operator*() const
-    {
+    value_type operator*() const {
         return _deref(std::make_index_sequence<sizeof...(Args_)>{});
     }
 
@@ -103,8 +97,7 @@ public:
 };
 
 template <typename Ty_, typename... Ph_>
-decltype(auto) _container_size(Ty_&& container, Ph_...)
-{
+decltype(auto) _container_size(Ty_&& container, Ph_...) {
     return container.size();
 }
 
@@ -117,8 +110,7 @@ decltype(auto) il(std::initializer_list<Ty_> v) { return v; }
  * iterable한 컨테이너들을 하나로 묶습니다.
  */
 template <typename... Containers_>
-decltype(auto) zip(Containers_&&... containers)
-{
+decltype(auto) zip(Containers_&&... containers) {
     auto begin = std::make_tuple(containers.begin()...);
     auto end = std::make_tuple(containers.end()...);
     auto size = impl__::_container_size(containers...);

@@ -26,18 +26,15 @@ public:
 
 public:
     counter_base() noexcept
-        : count_(0)
-    {
+        : count_(0) {
         ;
     }
     counter_base(Ty_ rhs) noexcept
-        : count_(rhs)
-    {
+        : count_(rhs) {
         ;
     }
     counter_base(counter_base const& rhs) noexcept
-        : count_(rhs.count_)
-    {
+        : count_(rhs.count_) {
         ;
     }
 
@@ -71,8 +68,7 @@ class counter_range_base {
 public:
     counter_range_base(Ty_ min, Ty_ max) noexcept
         : min_(min)
-        , max_(max)
-    {
+        , max_(max) {
         if (min_ > max_) {
             std::swap(min_, max_);
         }
@@ -80,8 +76,7 @@ public:
 
     counter_range_base(Ty_ max) noexcept
         : min_(Ty_{})
-        , max_(max)
-    {
+        , max_(max) {
         if (min_ > max_) {
             std::swap(min_, max_);
         }
@@ -104,8 +99,7 @@ using counter_range = counter_range_base<int64_t>;
  * It is recommended to set num_partitions as same as current thread count.
  */
 template <typename It_, typename Fn_, typename ExPo_>
-void for_each_partition(ExPo_&&, It_ first, It_ last, Fn_&& cb, size_t num_partitions = std::thread::hardware_concurrency())
-{
+void for_each_partition(ExPo_&&, It_ first, It_ last, Fn_&& cb, size_t num_partitions = std::thread::hardware_concurrency()) {
     if (first == last) { throw std::invalid_argument("Zero argument"); }
     if (num_partitions == 0) { throw std::invalid_argument("Invalid partition size"); }
     size_t num_elems = std::distance(first, last);
@@ -140,8 +134,7 @@ void for_each_partition(ExPo_&&, It_ first, It_ last, Fn_&& cb, size_t num_parti
  * convenient helper method for for_reach_partition
  */
 template <typename ExPo_, typename Fn_>
-void for_each_indexes(ExPo_&&, int64_t begin, int64_t end, Fn_&& cb, size_t num_partitions = std::thread::hardware_concurrency())
-{
+void for_each_indexes(ExPo_&&, int64_t begin, int64_t end, Fn_&& cb, size_t num_partitions = std::thread::hardware_concurrency()) {
     if (begin < end) { throw std::invalid_argument("end precedes begin"); }
 
     counter_range range(begin, end);
@@ -149,15 +142,13 @@ void for_each_indexes(ExPo_&&, int64_t begin, int64_t end, Fn_&& cb, size_t num_
 }
 
 template <typename ExPo_, typename Fn_>
-void for_each_indexes(int64_t begin, int64_t end, Fn_&& cb)
-{
+void for_each_indexes(int64_t begin, int64_t end, Fn_&& cb) {
     counter_range range(begin, end);
     std::for_each(range.begin(), range.end(), std::forward<Fn_>(cb));
 }
 
 template <typename... Args_>
-std::string format(char const* fmt, Args_&&... args)
-{
+std::string format(char const* fmt, Args_&&... args) {
     std::string s;
     auto buflen = snprintf(nullptr, 0, fmt, std::forward<Args_>(args)...);
     s.resize(buflen);
@@ -199,8 +190,7 @@ template <
   impl__::recurse_policy_base Policy_ = impl__::recurse_policy_base::preorder>
 decltype(auto) recurse_for_each(
   Ty_&& root, Recurse_&& recurse, Op_&& op,
-  std::integral_constant<impl__::recurse_policy_base, Policy_> = {})
-{
+  std::integral_constant<impl__::recurse_policy_base, Policy_> = {}) {
     auto operate = [&](auto&& ref) {
         if constexpr (std::is_invocable_v<Op_, Ty_, size_t>) {
             if constexpr (std::is_invocable_r_v<recurse_return, Op_, Ty_, size_t>) {
@@ -245,8 +235,7 @@ decltype(auto) recurse_for_each(
  * parameter pack의 N번째 argument를 얻습니다.
  */
 template <size_t N, typename... Args>
-decltype(auto) get_pack_element(Args&&... as) noexcept
-{
+decltype(auto) get_pack_element(Args&&... as) noexcept {
     return std::get<N>(std::forward_as_tuple(std::forward<Args>(as)...));
 }
 
@@ -255,8 +244,7 @@ decltype(auto) get_pack_element(Args&&... as) noexcept
  * @see https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
  */
 namespace impl__ {
-constexpr uint64_t fnv1a_impl(char const* s, char const* end)
-{
+constexpr uint64_t fnv1a_impl(char const* s, char const* end) {
     constexpr uint64_t PRIME = 0x100000001b3;
     constexpr uint64_t OFFSET = 0xcbf29ce484222325;
     uint64_t hash = OFFSET; // magic number
@@ -265,8 +253,7 @@ constexpr uint64_t fnv1a_impl(char const* s, char const* end)
     return hash;
 }
 } // namespace impl__
-constexpr uint64_t fnv1a(char const* str)
-{
+constexpr uint64_t fnv1a(char const* str) {
     char const* h = str;
     for (; *h; ++h) {}
     return impl__::fnv1a_impl(str, h);

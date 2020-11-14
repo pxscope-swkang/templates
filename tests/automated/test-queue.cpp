@@ -14,8 +14,7 @@
 #include "kangsw/misc.hxx"
 
 namespace kangsw::container_test::queue {
-TEST_CASE("Queue basic operations", "[lock_free_queue]")
-{
+TEST_CASE("Queue basic operations", "[lock_free_queue]") {
     using kangsw::atomic_queue;
     using std::string;
     size_t num_case = 128;
@@ -50,8 +49,7 @@ TEST_CASE("Queue basic operations", "[lock_free_queue]")
     }
 }
 
-TEST_CASE("Queue async operations", "[lock_free_queue]")
-{
+TEST_CASE("Queue async operations", "[lock_free_queue]") {
     using kangsw::atomic_queue;
     using std::thread;
     using std::vector;

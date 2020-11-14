@@ -21,8 +21,7 @@ namespace kangsw {
 class thread_pool_exception : public std::exception {
 public:
     explicit thread_pool_exception(char const* _Message)
-        : exception(_Message)
-    {
+        : exception(_Message) {
     }
 };
 
@@ -40,8 +39,7 @@ class future_proxy : public future_proxy_base {
     friend class future_proxy;
 
 public:
-    Ty_ get()
-    {
+    Ty_ get() {
         if (std::lock_guard lock(then_lock_); then_fn_) {
             throw thread_pool_exception("can't call get() after then() is called.");
         }
@@ -54,8 +52,7 @@ public:
     }
 
     std::shared_future<Ty_> const&
-    view()
-    {
+    view() {
         return future_;
     }
 
@@ -149,13 +146,11 @@ private:
 
             atomic_bool_wrap_t() = default;
             atomic_bool_wrap_t(const atomic_bool_wrap_t& other) = delete;
-            atomic_bool_wrap_t(atomic_bool_wrap_t&& other) noexcept
-            {
+            atomic_bool_wrap_t(atomic_bool_wrap_t&& other) noexcept {
                 value = other.value.load();
             }
             atomic_bool_wrap_t& operator=(const atomic_bool_wrap_t& other) = delete;
-            atomic_bool_wrap_t& operator=(atomic_bool_wrap_t&& other) noexcept
-            {
+            atomic_bool_wrap_t& operator=(atomic_bool_wrap_t&& other) noexcept {
                 value = other.value.load();
                 return *this;
             }
@@ -185,8 +180,7 @@ private:
 };
 
 template <typename Fn_, typename... Args_>
-void thread_pool::_package_task(task_function_type& event, std::shared_ptr<future_proxy_base> result, Fn_&& f, Args_... args)
-{
+void thread_pool::_package_task(task_function_type& event, std::shared_ptr<future_proxy_base> result, Fn_&& f, Args_... args) {
     using callable_return_type = std::invoke_result_t<Fn_, Args_...>;
     using proxy_type = future_proxy<callable_return_type>;
     using returns_void = std::is_same<callable_return_type, void>;
@@ -248,8 +242,7 @@ void thread_pool::_package_task(task_function_type& event, std::shared_ptr<futur
     }
 }
 
-inline void thread_pool::_enqueue_task(task_t&& task)
-{
+inline void thread_pool::_enqueue_task(task_t&& task) {
     if (num_pending_task() == 0) {
         latest_event_ = clock::now();
     }
@@ -267,8 +260,7 @@ inline void thread_pool::_enqueue_task(task_t&& task)
     event_wait_.notify_one();
 }
 template <typename Fn_, typename... Args_>
-decltype(auto) thread_pool::add_task(Fn_&& f, Args_... args)
-{
+decltype(auto) thread_pool::add_task(Fn_&& f, Args_... args) {
     static_assert(std::is_invocable_v<Fn_, Args_...>);
 
     using callable_return_type = std::invoke_result_t<Fn_, Args_...>;
@@ -285,18 +277,15 @@ decltype(auto) thread_pool::add_task(Fn_&& f, Args_... args)
 
 inline thread_pool::thread_pool(size_t task_queue_cap_, size_t num_workers, size_t worker_limit) noexcept
     : tasks_(task_queue_cap_)
-    , num_max_workers_(worker_limit)
-{
+    , num_max_workers_(worker_limit) {
     resize_worker_pool(num_workers, false);
 }
 
-inline thread_pool::~thread_pool()
-{
+inline thread_pool::~thread_pool() {
     _pop_workers(workers_.size());
 }
 
-inline void thread_pool::resize_worker_pool(size_t new_size, bool is_trial)
-{
+inline void thread_pool::resize_worker_pool(size_t new_size, bool is_trial) {
     new_size = std::min(num_max_workers_.load(), new_size);
     if (new_size == 0) {
         throw std::invalid_argument{"Size 0 is not allowed"};
@@ -317,8 +306,7 @@ inline void thread_pool::resize_worker_pool(size_t new_size, bool is_trial)
     latest_worker_change_ = clock::now();
 }
 
-inline void thread_pool::num_max_workers(size_t value)
-{
+inline void thread_pool::num_max_workers(size_t value) {
     if (value == 0) {
         throw std::invalid_argument("0 is not allowed");
     }
@@ -331,8 +319,7 @@ inline void thread_pool::num_max_workers(size_t value)
     }
 }
 
-inline bool thread_pool::_try_add_worker()
-{
+inline bool thread_pool::_try_add_worker() {
     static auto constexpr RELAXED = std::memory_order_relaxed;
     if (workers_.size() >= num_max_workers_) {
         return false;
@@ -387,8 +374,7 @@ inline bool thread_pool::_try_add_worker()
     return true;
 }
 
-inline void thread_pool::_pop_workers(size_t count)
-{
+inline void thread_pool::_pop_workers(size_t count) {
     auto const begin = workers_.end() - count;
     auto const end = workers_.end();
 
@@ -404,8 +390,7 @@ inline void thread_pool::_pop_workers(size_t count)
     num_workers_cached_ = workers_.size();
 }
 
-inline void thread_pool::_check_reserve_worker(size_t threshold)
-{
+inline void thread_pool::_check_reserve_worker(size_t threshold) {
     if ( // reserve workers if required.
       num_available_workers() <= threshold
       && (clock::now() - latest_active_.load() > max_stall_interval_time
@@ -417,8 +402,7 @@ inline void thread_pool::_check_reserve_worker(size_t threshold)
 
 template <typename Ty_> template <typename Fn_, typename... Args_>
 std::shared_ptr<future_proxy<std::invoke_result_t<Fn_, Ty_, Args_...>>>
-future_proxy<Ty_>::then(Fn_&& f, Args_&&... args)
-{
+future_proxy<Ty_>::then(Fn_&& f, Args_&&... args) {
     static_assert(std::is_invocable_v<Fn_, Ty_, Args_...>);
 
     std::lock_guard _0(then_lock_);
@@ -448,8 +432,7 @@ future_proxy<Ty_>::then(Fn_&& f, Args_&&... args)
 }
 
 template <typename Ty_> template <typename Fn_, typename... Args_> std::shared_ptr<future_proxy<std::invoke_result_t<Fn_, Args_...>>>
-future_proxy<Ty_>::then(Fn_&& f, Args_&&... args)
-{
+future_proxy<Ty_>::then(Fn_&& f, Args_&&... args) {
     static_assert(std::is_invocable_v<Fn_, Args_...>);
 
     std::lock_guard _0(then_lock_);
@@ -487,8 +470,7 @@ public:
       size_t task_queue_cap_ = 1024,
       size_t num_workers = std::thread::hardware_concurrency(),
       size_t concrete_worker_count_limit = -1)
-        : thread_pool(task_queue_cap_, num_workers, concrete_worker_count_limit)
-    {
+        : thread_pool(task_queue_cap_, num_workers, concrete_worker_count_limit) {
         timer_thread_ = std::thread{[this]() {
             while (!pending_dispose_.load()) {
                 if (std::unique_lock lock{timer_lock_}) {
@@ -523,8 +505,7 @@ public:
         }};
     }
 
-    ~timer_thread_pool()
-    {
+    ~timer_thread_pool() {
         pending_dispose_.store(true);
         timer_thread_wait_.notify_one();
         timer_thread_.join();
@@ -532,8 +513,7 @@ public:
 
 public:
     template <typename Fn_, typename... Args_>
-    decltype(auto) add_timer(clock::time_point issue, Fn_&& f, Args_... args)
-    {
+    decltype(auto) add_timer(clock::time_point issue, Fn_&& f, Args_... args) {
         task_function_type event;
         using proxy_type = future_proxy<std::invoke_result_t<Fn_, Args_...>>;
         auto result = std::make_shared<proxy_type>();
@@ -554,8 +534,7 @@ public:
     }
 
     template <typename Fn_, typename... Args_>
-    decltype(auto) add_timer(std::chrono::microseconds delay, Fn_&& f, Args_... args)
-    {
+    decltype(auto) add_timer(std::chrono::microseconds delay, Fn_&& f, Args_... args) {
         return add_timer(clock::now() + delay, std::forward<Fn_>(f), std::forward<Args_>(args)...);
     }
 

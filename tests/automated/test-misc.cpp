@@ -24,8 +24,7 @@ DEFINE_NEW_INFIX_OPR(add, >, <);
 DEFINE_NEW_INFIX_OPR(add, >>, <<);
 DEFINE_NEW_INFIX_OPR(add, <<, >>);
 DEFINE_NEW_INFIX_OPR(add, %, %);
-DEFINE_NEW_INFIX(add, l, r)
-{
+DEFINE_NEW_INFIX(add, l, r) {
     return l + r;
 }
 
@@ -33,8 +32,7 @@ DEFINE_NEW_INFIX_OPR_WITH_DEST(multiply, <<, <<);
 DEFINE_NEW_INFIX_OPR_WITH_DEST(multiply, >>, >>);
 DEFINE_NEW_INFIX_OPR_WITH_DEST(multiply, -, -);
 DEFINE_NEW_INFIX_OPR_WITH_DEST(multiply, |, |);
-DEFINE_NEW_INFIX_WITH_DEST(multiply, d, l, r)
-{
+DEFINE_NEW_INFIX_WITH_DEST(multiply, d, l, r) {
     d = (float)l * r;
 }
 
@@ -43,15 +41,13 @@ namespace ns {
 DEFINE_NEW_INFIX_OPR_WITH_DEST(multiply, >>, >>);
 DEFINE_NEW_INFIX_OPR_WITH_DEST(multiply, -, -);
 DEFINE_NEW_INFIX_OPR_WITH_DEST(multiply, |, |);
-DEFINE_NEW_INFIX_WITH_DEST(multiply, d, l, r)
-{
+DEFINE_NEW_INFIX_WITH_DEST(multiply, d, l, r) {
     d = (float)l * r;
 }
 
 } // namespace ns
 
-TEST_CASE("infix feature test", "[custom_infix]")
-{
+TEST_CASE("infix feature test", "[custom_infix]") {
     REQUIRE((1 ^ add ^ 2) == 3);
     REQUIRE((1 / add / 2) == 3);
     REQUIRE((1 | add | 2) == 3);
@@ -75,8 +71,7 @@ TEST_CASE("infix feature test", "[custom_infix]")
 
 namespace sk = kangsw;
 
-TEST_CASE("packed tuple test")
-{
+TEST_CASE("packed tuple test") {
     auto a = {1, 1, 2};
     auto b = {2, 3, 3};
     auto sum = {3, 4, 5};
@@ -91,8 +86,7 @@ TEST_CASE("packed tuple test")
     REQUIRE_THROWS(zip(a, b, c));
 }
 
-TEST_CASE("constexpr hashing")
-{
+TEST_CASE("constexpr hashing") {
     switch (fnv1a("hell, world!")) {
     case fnv1a("hell, world!"):
         break;

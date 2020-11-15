@@ -198,14 +198,14 @@ constexpr impl__::recurse_policy_v<impl__::recurse_policy_base::postorder> posto
  * 
  */
 template <
-  typename Ty_, typename Recurse_, typename Op_,
+  typename Ref_, typename Recurse_, typename Op_,
   impl__::recurse_policy_base Policy_ = impl__::recurse_policy_base::preorder>
 decltype(auto) recurse_for_each(
-  Ty_&& root, Recurse_&& recurse, Op_&& op,
+  Ref_ root, Recurse_&& recurse, Op_&& op,
   std::integral_constant<impl__::recurse_policy_base, Policy_> = {}) {
     auto operate = [&](auto&& ref) {
-        if constexpr (std::is_invocable_v<Op_, Ty_, size_t>) {
-            if constexpr (std::is_invocable_r_v<recurse_return, Op_, Ty_, size_t>) {
+        if constexpr (std::is_invocable_v<Op_, Ref_, size_t>) {
+            if constexpr (std::is_invocable_r_v<recurse_return, Op_, Ref_, size_t>) {
                 if (op(ref.first, ref.second) == recurse_return::do_break) { return false; }
             }
             else {
@@ -213,7 +213,7 @@ decltype(auto) recurse_for_each(
             }
         }
         else {
-            if constexpr (std::is_invocable_r_v<recurse_return, Op_, Ty_, size_t>) {
+            if constexpr (std::is_invocable_r_v<recurse_return, Op_, Ref_, size_t>) {
                 if (op(ref.first) == recurse_return::do_break) { return false; }
             }
             else {
@@ -225,7 +225,7 @@ decltype(auto) recurse_for_each(
     };
 
     if constexpr (Policy_ == impl__::recurse_policy_base::preorder) {
-        std::vector<std::pair<Ty_&, size_t>> stack;
+        std::vector<std::pair<Ref_, size_t>> stack;
         stack.emplace_back(root, 0);
 
         while (!stack.empty()) {
@@ -233,7 +233,7 @@ decltype(auto) recurse_for_each(
             stack.pop_back();
 
             if (operate(ref)) {
-                recurse(ref.first, [&stack, n = ref.second + 1](Ty_& arg) { stack.emplace_back(arg, n); });
+                recurse(ref.first, [&stack, n = ref.second + 1](Ref_ arg) { stack.emplace_back(arg, n); });
             }
         }
     }

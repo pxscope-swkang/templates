@@ -194,8 +194,7 @@ constexpr impl__::recurse_policy_v<impl__::recurse_policy_base::postorder> posto
  * 재귀적으로 작업을 수행합니다.
  * @param root 루트가 되는 노드입니다.
  * @param recurse Ty_로부터 하위 노드를 추출합니다. void(Ty_& parent, void (emplacer)(Ty_&)) 시그니쳐를 갖는 콜백으로, parent의 자손 노드를 iterate해 각각의 노드에 대해 emplacer(node)를 호출하여 재귀적인 작업을 수행할 수 있습니다.
- * @param op 재귀 중 각 노드에 대해 실행할 작업입니다. [optional] recurse_return을 반환하여 재귀 도중 빠져나올 수 있습니다.
- *          가능한 signature: 
+ * @param op 재귀 중 각 노드에 대해 실행할 작업입니다. [optional] recurse_return을 반환하여 현재 노드에서 더 깊이 내려가지 않을 수 있습니다.
  * 
  */
 template <
@@ -233,8 +232,9 @@ decltype(auto) recurse_for_each(
             auto ref = stack.back();
             stack.pop_back();
 
-            operate(ref);
-            recurse(ref.first, [&stack, n = ref.second + 1](Ty_& arg) { stack.emplace_back(arg, n); });
+            if (operate(ref)) {
+                recurse(ref.first, [&stack, n = ref.second + 1](Ty_& arg) { stack.emplace_back(arg, n); });
+            }
         }
     }
     else if constexpr (Policy_ == impl__::recurse_policy_base::postorder) {

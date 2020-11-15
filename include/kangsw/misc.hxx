@@ -8,6 +8,7 @@
  */
 #pragma once
 #include <execution>
+#include <functional>
 #include <iterator>
 #include <optional>
 #include <string>
@@ -170,11 +171,6 @@ std::string format(char const* fmt, Args_&&... args) {
     return s;
 }
 
-enum class recurse_return {
-    do_continue,
-    do_break
-};
-
 namespace impl__ {
 enum class recurse_policy_base {
     preorder,
@@ -194,36 +190,14 @@ constexpr impl__::recurse_policy_v<impl__::recurse_policy_base::postorder> posto
  * 재귀적으로 작업을 수행합니다.
  * @param root 루트가 되는 노드입니다.
  * @param recurse Ty_로부터 하위 노드를 추출합니다. void(Ty_& parent, void (emplacer)(Ty_&)) 시그니쳐를 갖는 콜백으로, parent의 자손 노드를 iterate해 각각의 노드에 대해 emplacer(node)를 호출하여 재귀적인 작업을 수행할 수 있습니다.
- * @param op 재귀 중 각 노드에 대해 실행할 작업입니다. [optional] recurse_return을 반환하여 현재 노드에서 더 깊이 내려가지 않을 수 있습니다.
  * 
  */
 template <
-  typename Ref_, typename Recurse_, typename Op_,
+  typename Ref_, typename Recurse_,
   impl__::recurse_policy_base Policy_ = impl__::recurse_policy_base::preorder>
 decltype(auto) recurse_for_each(
-  Ref_ root, Recurse_&& recurse, Op_&& op,
+  Ref_ root, Recurse_&& recurse,
   std::integral_constant<impl__::recurse_policy_base, Policy_> = {}) {
-    auto operate = [&](auto&& ref) {
-        if constexpr (std::is_invocable_v<Op_, Ref_, size_t>) {
-            if constexpr (std::is_invocable_r_v<recurse_return, Op_, Ref_, size_t>) {
-                if (op(ref.first, ref.second) == recurse_return::do_break) { return false; }
-            }
-            else {
-                op(ref.first, ref.second);
-            }
-        }
-        else {
-            if constexpr (std::is_invocable_r_v<recurse_return, Op_, Ref_, size_t>) {
-                if (op(ref.first) == recurse_return::do_break) { return false; }
-            }
-            else {
-                op(ref.first);
-            }
-        }
-
-        return true;
-    };
-
     if constexpr (Policy_ == impl__::recurse_policy_base::preorder) {
         std::vector<std::pair<Ref_, size_t>> stack;
         stack.emplace_back(root, 0);
@@ -232,8 +206,14 @@ decltype(auto) recurse_for_each(
             auto ref = stack.back();
             stack.pop_back();
 
-            if (operate(ref)) {
+            if constexpr (std::is_invocable_v<Recurse_, Ref_, void(Ref_)>) {
                 recurse(ref.first, [&stack, n = ref.second + 1](Ref_ arg) { stack.emplace_back(arg, n); });
+            }
+            else if constexpr (std::is_invocable_v<Recurse_, Ref_, size_t, void(Ref_)>) {
+                recurse(ref.first, ref.second, [&stack, n = ref.second + 1](Ref_ arg) { stack.emplace_back(arg, n); });
+            }
+            else {
+                static_assert(false);
             }
         }
     }
@@ -244,6 +224,7 @@ decltype(auto) recurse_for_each(
         static_assert(false);
     }
 }
+
 /**
  * parameter pack의 N번째 argument를 얻습니다.
  */

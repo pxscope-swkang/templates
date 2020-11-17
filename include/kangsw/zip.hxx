@@ -98,7 +98,7 @@ public:
 
 template <typename Ty_, typename... Ph_>
 decltype(auto) _container_size(Ty_&& container, Ph_...) {
-    return container.size();
+    return std::size(container);
 }
 
 } // namespace impl__
@@ -111,15 +111,15 @@ decltype(auto) il(std::initializer_list<Ty_> v) { return v; }
  */
 template <typename... Containers_>
 decltype(auto) zip(Containers_&&... containers) {
-    auto begin = std::make_tuple(containers.begin()...);
-    auto end = std::make_tuple(containers.end()...);
+    auto begin = std::make_tuple(std::begin(containers)...);
+    auto end = std::make_tuple(std::end(containers)...);
     auto size = impl__::_container_size(containers...);
 
-    if (((size != containers.size()) || ...)) {
+    if (((size != std::size(containers)) || ...)) {
         throw std::invalid_argument("container size does not match!");
     }
 
-    impl__::_zip_range<decltype(containers.begin())...> zips;
+    impl__::_zip_range<decltype(std::begin(containers))...> zips;
     zips.begin_ = begin;
     zips.end_ = end;
     zips.size_ = size;

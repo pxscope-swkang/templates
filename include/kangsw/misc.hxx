@@ -107,6 +107,7 @@ private:
 
 using counter = counter_base<int64_t>;
 using counter_range = counter_range_base<int64_t>;
+using iota = counter_range_base<int64_t>;
 
 /**
  * Executes for_each with given parallel execution policy. However, it provides current partition index within given callback.
@@ -129,7 +130,7 @@ void for_each_partition(ExPo_&&, It_ first, It_ last, Fn_&& cb, size_t num_parti
           It_ it = first, end;
           size_t current_index = steps * partition_index;
           std::advance(it, current_index);
-          std::advance(end = it, partition_index +1 == num_partitions ? num_elems - current_index : steps);
+          std::advance(end = it, partition_index + 1 == num_partitions ? num_elems - current_index : steps);
 
           for (; it != end; ++it) {
               if constexpr (std::is_invocable_v<Fn_, decltype(*it)>) {

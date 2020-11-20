@@ -117,7 +117,7 @@ void for_each_partition(ExPo_&&, It_ first, It_ last, Fn_&& cb, size_t num_parti
     if (first == last) { throw std::invalid_argument("Zero argument"); }
     if (num_partitions == 0) { throw std::invalid_argument("Invalid partition size"); }
     size_t num_elems = std::distance(first, last);
-    size_t steps = (num_elems - 1) / num_partitions + 1;
+    size_t steps = std::max<size_t>(1, num_elems / num_partitions);
     num_partitions = std::min(num_elems, num_partitions);
     counter_range partitions(num_partitions);
 
@@ -125,10 +125,11 @@ void for_each_partition(ExPo_&&, It_ first, It_ last, Fn_&& cb, size_t num_parti
       ExPo_{},
       partitions.begin(),
       partitions.end(),
-      [num_elems, steps, &cb, &first](size_t partition_index) {
+      [num_elems, num_partitions, steps, &cb, &first](size_t partition_index) {
           It_ it = first, end;
-          std::advance(it, steps * partition_index);
-          std::advance(end = it, steps * (partition_index + 1) <= num_elems ? steps : num_elems - steps * partition_index);
+          size_t current_index = steps * partition_index;
+          std::advance(it, current_index);
+          std::advance(end = it, partition_index +1 == num_partitions ? num_elems - current_index : steps);
 
           for (; it != end; ++it) {
               if constexpr (std::is_invocable_v<Fn_, decltype(*it)>) {

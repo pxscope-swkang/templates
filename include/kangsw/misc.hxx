@@ -76,9 +76,9 @@ private:
 };
 
 template <typename Ty_>
-class counter_range_base {
+class iota {
 public:
-    counter_range_base(Ty_ min, Ty_ max) noexcept
+    iota(Ty_ min, Ty_ max) noexcept
         :
         min_(min),
         max_(max) {
@@ -87,7 +87,7 @@ public:
         }
     }
 
-    counter_range_base(Ty_ max) noexcept
+    iota(Ty_ max) noexcept
         :
         min_(Ty_{}),
         max_(max) {
@@ -105,9 +105,8 @@ private:
     Ty_ min_, max_;
 };
 
-using counter = counter_base<int64_t>;
-using counter_range = counter_range_base<int64_t>;
-using iota = counter_range_base<int64_t>;
+using counter = counter_base<ptrdiff_t>;
+using counter_range = iota<ptrdiff_t>;
 
 /**
  * Executes for_each with given parallel execution policy. However, it provides current partition index within given callback.
@@ -115,6 +114,47 @@ using iota = counter_range_base<int64_t>;
  */
 template <typename It_, typename Fn_, typename ExPo_>
 void for_each_partition(ExPo_&&, It_ first, It_ last, Fn_&& cb, size_t num_partitions = std::thread::hardware_concurrency()) {
+    if (first == last) { throw std::invalid_argument("Zero argument"); }
+    if (num_partitions == 0) { throw std::invalid_argument("Invalid partition size"); }
+    size_t num_elems = std::distance(first, last);
+    size_t steps = std::max<size_t>(1, num_elems / num_partitions);
+    num_partitions = std::min(num_elems, num_partitions);
+    counter_range partitions(num_partitions);
+
+    std::for_each(
+      ExPo_{},
+      partitions.begin(),
+      partitions.end(),
+      [num_elems, num_partitions, steps, &cb, &first](size_t partition_index) {
+          It_ it = first, end;
+          size_t current_index = steps * partition_index;
+          std::advance(it, current_index);
+          std::advance(end = it, partition_index + 1 == num_partitions ? num_elems - current_index : steps);
+
+          for (; it != end; ++it) {
+              if constexpr (std::is_invocable_v<Fn_, decltype(*it)>) {
+                  cb(*it);
+              }
+              else if constexpr (std::is_invocable_v<Fn_, decltype(*it), size_t /*partition*/>) {
+                  cb(*it, partition_index);
+              }
+              else {
+                  static_assert(false, "given callback has invalid signature");
+              }
+          }
+      });
+}
+
+/**
+ * Executes for_each with given parallel execution policy. However, it provides current partition index within given callback.
+ * It is recommended to set num_partitions as same as current thread count.
+ */
+template <typename Range_, typename Fn_, typename ExPo_>
+void for_each_range(ExPo_&&, Range_&& range, Fn_&& cb, size_t num_partitions = std::thread::hardware_concurrency()) {
+    auto first = std::begin(range);
+    auto last = std::end(range);
+    using It_ = decltype(first);
+
     if (first == last) { throw std::invalid_argument("Zero argument"); }
     if (num_partitions == 0) { throw std::invalid_argument("Invalid partition size"); }
     size_t num_elems = std::distance(first, last);

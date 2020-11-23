@@ -60,7 +60,7 @@ private:
 template <typename Ty_>
 class iota {
 public:
-    iota(Ty_ min, Ty_ max) noexcept
+    constexpr iota(Ty_ min, Ty_ max) noexcept
         :
         min_(min),
         max_(max) {
@@ -69,7 +69,7 @@ public:
         }
     }
 
-    iota(Ty_ max) noexcept
+    constexpr iota(Ty_ max) noexcept
         :
         min_(Ty_{}),
         max_(max) {

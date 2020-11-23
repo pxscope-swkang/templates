@@ -88,12 +88,10 @@ public:
 
     _zip_iterator<Args_...> begin() const { return {begin_}; }
     _zip_iterator<Args_...> end() const { return {end_}; }
-    size_t size() const { return size_; }
 
 public:
     tuple_type begin_;
     tuple_type end_;
-    size_t size_;
 };
 
 template <typename Ty_, typename... Ph_>
@@ -113,16 +111,10 @@ template <typename... Containers_>
 decltype(auto) zip(Containers_&&... containers) {
     auto begin = std::make_tuple(std::begin(containers)...);
     auto end = std::make_tuple(std::end(containers)...);
-    auto size = impl__::_container_size(containers...);
-
-    if (((size != std::size(containers)) || ...)) {
-        throw std::invalid_argument("container size does not match!");
-    }
 
     impl__::_zip_range<decltype(std::begin(containers))...> zips;
     zips.begin_ = begin;
     zips.end_ = end;
-    zips.size_ = size;
     return zips;
 }
 

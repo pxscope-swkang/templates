@@ -1,5 +1,8 @@
 #pragma once
+#include <array>
 #include <iterator>
+#include <numeric>
+#include "details/tuple_for_each.hxx"
 
 namespace kangsw {
 /**
@@ -89,4 +92,5 @@ private:
 
 using counter = counter_base<ptrdiff_t>;
 using counter_range = iota<ptrdiff_t>;
+
 } // namespace kangsw

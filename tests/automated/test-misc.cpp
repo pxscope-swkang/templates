@@ -85,7 +85,7 @@ TEST_CASE("packed tuple test") {
 
     zip(il({1, 2, 3}));
     auto c = {1, 3, 4, 5};
-    REQUIRE_THROWS(zip(a, b, c));
+    REQUIRE_THROWS(([&]() { for(auto i : zip(a, b, c)){}; }()));
 }
 
 TEST_CASE("constexpr hashing") {
@@ -159,5 +159,8 @@ TEST_CASE("ownership") {
         a = std::move(c);
     }
     REQUIRE(owner::callcnt_ == 1);
+}
+
+TEST_CASE("n-dim counter") {
 }
 } // namespace kangsw::misc_test

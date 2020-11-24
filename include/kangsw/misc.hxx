@@ -12,6 +12,7 @@
 #include <iterator>
 #include <optional>
 #include <string>
+#include <thread>
 #include "counter.hxx"
 #include "for_each.hxx"
 #include "zip.hxx"
@@ -77,6 +78,25 @@ std::string format(char const* fmt, Args_&&... args) {
 
     snprintf(s.data(), buflen, fmt, std::forward<Args_>(args)...);
     return s;
+}
+
+/**
+ * Executes for_each with given parallel execution policy. However, it provides current partition index within given callback.
+ * It is recommended to set num_partitions as same as current thread count.
+ */
+template <typename It_, typename Fn_>
+void for_each_threads(It_ first, It_ last, Fn_&& cb) {
+    auto num_partitions = std::thread::hardware_concurrency();
+    for_each_partition(std::execution::par_unseq, first, last, std::forward<Fn_>(cb), num_partitions);
+}
+
+/**
+ * Executes for_each with given parallel execution policy. However, it provides current partition index within given callback.
+ * It is recommended to set num_partitions as same as current thread count.
+ */
+template <typename Range_, typename Fn_>
+void for_each_threads(Range_&& range, Fn_&& cb) {
+    for_each_threads(std::begin(range), std::end(range), std::forward<Fn_>(cb));
 }
 
 } // namespace kangsw

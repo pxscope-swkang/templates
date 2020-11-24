@@ -39,7 +39,7 @@ TEST_CASE("thread pool default operation", "[.]") {
         thr.num_max_workers(256);
 
         // multithreaded enqueing
-        counter_range counter(NUM_CASE);
+        iota counter(NUM_CASE);
         for_each(std::execution::par_unseq, counter.begin(), counter.end(), [&](size_t i) {
             auto exec_time = chrono::system_clock::now() + chrono::milliseconds(rand() % 1200);
             futures[i] = make_pair(

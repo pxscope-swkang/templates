@@ -13,13 +13,12 @@ template <typename ExPo_, typename Fn_>
 void for_each_indexes(ExPo_&&, int64_t begin, int64_t end, Fn_&& cb, size_t num_partitions = std::thread::hardware_concurrency()) {
     if (begin < end) { throw std::invalid_argument("end precedes begin"); }
 
-    counter_range range(begin, end);
-    for_each_threads(range.end(), std::forward<Fn_>(cb));
+    for_each_threads(iota{begin, end}, std::forward<Fn_>(cb));
 }
 
 template <typename ExPo_, typename Fn_>
 void for_each_indexes(int64_t begin, int64_t end, Fn_&& cb) {
-    counter_range range(begin, end);
+    iota range(begin, end);
     std::for_each(range.begin(), range.end(), std::forward<Fn_>(cb));
 }
 
@@ -84,7 +83,7 @@ void for_each_partition(ExPo_&&, It_ first, It_ last, Fn_&& cb, size_t num_parti
     size_t num_elems = std::distance(first, last);
     size_t steps = std::max<size_t>(1, num_elems / num_partitions);
     num_partitions = std::min(num_elems, num_partitions);
-    counter_range partitions(num_partitions);
+    iota partitions(num_partitions);
 
     std::for_each(
       ExPo_{},

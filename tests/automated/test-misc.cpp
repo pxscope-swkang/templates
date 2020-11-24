@@ -162,5 +162,22 @@ TEST_CASE("ownership") {
 }
 
 TEST_CASE("n-dim counter") {
+    constexpr size_t I = 15, J = 55, K = 66;
+    bool set[I][J][K] = {};
+
+    for (auto& index : counter(I, J, K)) {
+        set[index[0]][index[1]][index[2]] = true;
+    }
+
+    bool successful = true;
+    for (auto& i : iota{I}) {
+        for (auto& j : iota{J}) {
+            for (auto& k : iota{K}) {
+                successful = successful && set[i][j][k];
+            }
+        }
+    }
+
+    REQUIRE(successful);
 }
 } // namespace kangsw::misc_test

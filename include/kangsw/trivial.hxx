@@ -1,4 +1,6 @@
 #pragma once
+#include <span>
+#include <vector>
 
 namespace kangsw {
 /**
@@ -76,9 +78,25 @@ constexpr size_t countof(Ty_ (&)[N]) { return N; }
  * swap remove an vector-like container
  */
 template <typename Container_>
-void swap_remove(Container_ const& ct, typename Container_::size_type at) {
+void swap_remove(Container_& ct, typename Container_::size_type at) {
     if (at < ct.size()) { std::swap(ct[at], ct.back()); }
     ct.pop_back();
+}
+
+namespace ___internals {
+thread_local static std::vector<size_t> indexes;
+}
+/**
+ * sort vectors by one vector
+ */
+template <typename Pvt_, typename... Containers_>
+auto& sort_index(Pvt_& pivot) {
+    auto& indexes = ___internals::indexes;
+    std::iota(indexes.begin(), indexes.end(), std::size(pivot));
+    std::sort(indexes.begin(), indexes.end(),
+              [&pivot, pred = std::less<Pvt_>{}](size_t l, size_t r) { return pred(pivot[l], pivot[r]); });
+
+    return indexes;
 }
 
 } // namespace kangsw

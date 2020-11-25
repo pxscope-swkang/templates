@@ -21,9 +21,18 @@ public:
     constexpr hash_index(std::string_view str) noexcept :
         hash_(impl__::fnv1a_impl(str.data(), str.data() + str.size())) {}
 
+    constexpr hash_index(std::string const& str) noexcept :
+        hash_(impl__::fnv1a_impl(str.data(), str.data() + str.size())) {}
+
     template <size_t N>
     constexpr hash_index(char const (&str)[N]) noexcept :
+        hash_(impl__::fnv1a_impl(str, str + N)) {}
+
+    constexpr hash_index(char const* str) noexcept :
         hash_(fnv1a(str)) {}
+
+    constexpr hash_index(char const* str, size_t N) noexcept :
+        hash_(impl__::fnv1a_impl(str, str + N)) {}
 
     constexpr hash_index(size_t value = -1) noexcept :
         hash_(value) {}
@@ -52,7 +61,7 @@ private:
 
 inline namespace literals {
 constexpr auto operator""_hash(char const* str, size_t n) {
-    return hash_index({str, n});
+    return hash_index(str, n);
 }
 
 struct hash_pack {

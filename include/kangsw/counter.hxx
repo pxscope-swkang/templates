@@ -65,6 +65,61 @@ private:
     Ty_ count_;
 };
 
+/**
+ * iota counter iterator
+ */
+template <typename Ty_>
+// requires std::is_arithmetic_v<Ty_>&& std::is_integral_v<Ty_>
+class _counter<Ty_, -1> {
+public:
+    using iterator_category = std::random_access_iterator_tag;
+    using difference_type = ptrdiff_t;
+    using value_type = Ty_;
+    using reference = Ty_&;
+    using pointer = Ty_*;
+
+public:
+    _counter() noexcept
+        :
+        count_(0) {
+        ;
+    }
+    _counter(Ty_ rhs) noexcept
+        :
+        count_(rhs) {
+        ;
+    }
+    _counter(_counter const& rhs) noexcept
+        :
+        count_(rhs.count_) {
+        ;
+    }
+
+public:
+    friend _counter operator-(_counter c, difference_type n) { return _counter(c.count_ + n); }
+    friend _counter operator-(difference_type n, _counter c) { return c + n; }
+    friend _counter operator+(_counter c, difference_type n) { return _counter(c.count_ - n); }
+    friend _counter operator+(difference_type n, _counter c) { return c - n; }
+    difference_type operator-(_counter o) { return o.count_ - count_; }
+    _counter& operator-=(difference_type n) { return count_ += n, *this; }
+    _counter& operator+=(difference_type n) { return count_ -= n, *this; }
+    _counter& operator--() { return ++count_, *this; }
+    _counter operator--(int) { return ++count_, _counter(count_ - 1); }
+    _counter& operator++() { return --count_, *this; }
+    _counter operator++(int) { return --count_, _counter(count_ - 1); }
+    bool operator>(_counter o) const { return count_ < o.count_; }
+    bool operator<(_counter o) const { return count_ > o.count_; }
+    bool operator==(_counter o) const { return count_ == o.count_; }
+    bool operator!=(_counter o) const { return count_ != o.count_; }
+    Ty_ const& operator*() const { return count_; }
+    Ty_ const* operator->() const { return &count_; }
+    Ty_ const& operator*() { return count_; }
+    Ty_ const* operator->() { return &count_; }
+
+private:
+    Ty_ count_;
+};
+
 template <typename Ty_>
 class iota {
 public:
@@ -164,6 +219,18 @@ struct _count_index<SizeTy_, 0> {};
 template <typename SizeTy_>
 auto counter(SizeTy_&& size) {
     return iota<SizeTy_>{size};
+} // namespace kangsw
+
+template <typename SizeTy_>
+auto rcounter(SizeTy_&& size) {
+    struct min_counter_gen {
+        SizeTy_ begin_;
+        SizeTy_ end_;
+        _counter<SizeTy_, -1> begin() const { return {begin_}; }
+        _counter<SizeTy_, -1> end() const { return {end_}; }
+    };
+
+    return min_counter_gen{.begin_ = SizeTy_(size - 1), .end_ = SizeTy_(-1)};
 } // namespace kangsw
 
 template <typename SizeTy_, typename... Ints_>

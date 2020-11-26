@@ -62,15 +62,21 @@ private:
  * Same sized pointer cast
  */
 template <typename DTy_, typename STy_>
-auto ref_cast(STy_ const& ref) {
+auto value_cast(STy_ const& ref) {
     static_assert(sizeof(STy_) == sizeof(DTy_));
-    return reinterpret_cast<DTy_ const*>(&ref);
+    return *reinterpret_cast<DTy_ const*>(&ref);
 }
 
 template <typename DTy_, typename STy_>
-auto ref_cast(STy_& ref) {
+auto ptr_cast(STy_ const* ref) {
     static_assert(sizeof(STy_) == sizeof(DTy_));
-    return reinterpret_cast<DTy_*>(&ref);
+    return reinterpret_cast<DTy_ const*>(ref);
+}
+
+template <typename DTy_, typename STy_>
+auto ptr_cast(STy_ * ref) {
+    static_assert(sizeof(STy_) == sizeof(DTy_));
+    return reinterpret_cast<DTy_ *>(ref);
 }
 
 /**

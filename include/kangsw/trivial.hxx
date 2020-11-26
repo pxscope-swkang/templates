@@ -59,6 +59,21 @@ private:
 };
 
 /**
+ * Same sized pointer cast
+ */
+template <typename DTy_, typename STy_>
+auto ptr_cast(STy_* ptr) {
+    static_assert(sizeof(STy_) == sizeof(DTy_));
+
+    if constexpr (std::is_const_v<decltype(*ptr)>) {
+        return reinterpret_cast<DTy_ const*>(ptr);
+    }
+    else {
+        return reinterpret_cast<DTy_*>(ptr);
+    }
+}
+
+/**
  * Get index of element from reference
  */
 template <typename Container_>

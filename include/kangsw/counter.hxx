@@ -217,12 +217,12 @@ template <typename SizeTy_>
 struct _count_index<SizeTy_, 0> {};
 
 template <typename SizeTy_>
-auto counter(SizeTy_&& size) {
+auto counter(SizeTy_ size) {
     return iota<SizeTy_>{size};
 } // namespace kangsw
 
 template <typename SizeTy_>
-auto rcounter(SizeTy_&& size) {
+auto rcounter(SizeTy_ size) {
     struct min_counter_gen {
         SizeTy_ begin_;
         SizeTy_ end_;
@@ -234,7 +234,7 @@ auto rcounter(SizeTy_&& size) {
 } // namespace kangsw
 
 template <typename SizeTy_, typename... Ints_>
-auto counter(SizeTy_&& size, Ints_&&... args) {
+auto counter(SizeTy_ size, Ints_... args) {
     constexpr auto n_dim = sizeof...(Ints_) + 1;
     using size_type = std::decay_t<SizeTy_>;
     _count_index<size_type, n_dim> counter;

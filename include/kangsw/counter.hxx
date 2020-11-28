@@ -244,4 +244,12 @@ auto counter(SizeTy_ size, Ints_... args) {
       [&]<typename Int_>(Int_&& r, size_t i) { counter.max[i + 1] = std::forward<Int_>(r); });
     return counter;
 }
-} // namespace kangsw::inline counter
+
+template <typename SizeTy_, size_t Dim_>
+auto counter(std::array<SizeTy_, Dim_> const& idx) {
+    _count_index<SizeTy_, Dim_> counter;
+    for (size_t i = 0; i < Dim_; ++i) { counter.max[i] = idx[i]; }
+    return counter;
+}
+
+} // namespace kangsw::inline counters

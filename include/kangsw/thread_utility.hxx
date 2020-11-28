@@ -10,7 +10,7 @@
 #include <atomic>
 #include <shared_mutex>
 
-namespace kangsw {
+namespace kangsw:: inline threads {
 /**
  * 프로세스가 스코프 바깥으로 나가는 것을 방지.
  * 멀티스레드 환경에서, 클래스 멤버 가장 아래쪽에 배치하여 소멸 시점을 제어할 수 있습니다.

@@ -1,8 +1,10 @@
 #pragma once
 #include <span>
 #include <vector>
+#include <algorithm>
+#include <numeric>
 
-namespace kangsw {
+namespace kangsw::inline misc {
 /**
  * @see https://stackoverflow.com/questions/55288555/c-check-if-statement-can-be-evaluated-constexpr
  * evaluates given expression can be constexpr
@@ -23,8 +25,7 @@ decltype(auto) get_pack_element(Args&&... as) noexcept {
  * 64-bit compile-time hash
  * @see https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
  */
-namespace impl__ {
-constexpr uint64_t fnv1a_impl(char const* s, char const* end) {
+constexpr uint64_t _fnv1a_impl(char const* s, char const* end) {
     constexpr uint64_t PRIME = 0x100000001b3;
     constexpr uint64_t OFFSET = 0xcbf29ce484222325;
     uint64_t hash = OFFSET; // magic number
@@ -32,11 +33,10 @@ constexpr uint64_t fnv1a_impl(char const* s, char const* end) {
     for (; s != end; ++s) { hash = (hash ^ *s) * PRIME; }
     return hash;
 }
-} // namespace impl__
 constexpr uint64_t fnv1a(char const* str) {
     char const* h = str;
     for (; *h; ++h) {}
-    return impl__::fnv1a_impl(str, h);
+    return _fnv1a_impl(str, h);
 }
 
 /**
@@ -74,9 +74,9 @@ auto ptr_cast(STy_ const* ref) {
 }
 
 template <typename DTy_, typename STy_>
-auto ptr_cast(STy_ * ref) {
+auto ptr_cast(STy_* ref) {
     static_assert(sizeof(STy_) == sizeof(DTy_));
-    return reinterpret_cast<DTy_ *>(ref);
+    return reinterpret_cast<DTy_*>(ref);
 }
 
 /**
@@ -120,4 +120,4 @@ auto& sort_index(Pvt_& pivot) {
     return indexes;
 }
 
-} // namespace kangsw
+} // namespace kangsw::inline trivial

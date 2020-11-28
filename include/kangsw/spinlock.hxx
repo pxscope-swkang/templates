@@ -10,7 +10,7 @@
 #include <atomic>
 #include <thread>
 
-namespace kangsw {
+namespace kangsw:: inline threads {
 //! @see https://rigtorp.se/spinlock/
 //! Applied slight modification to use atomic_flag
 struct spinlock {

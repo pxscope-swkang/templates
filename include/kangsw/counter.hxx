@@ -4,7 +4,7 @@
 #include <numeric>
 #include "details/tuple_for_each.hxx"
 
-namespace kangsw {
+namespace kangsw::inline counters {
 
 template <typename Ty_, size_t Dim_ = 1>
 // requires std::is_arithmetic_v<Ty_>&& std::is_integral_v<Ty_>
@@ -244,4 +244,4 @@ auto counter(SizeTy_ size, Ints_... args) {
       [&]<typename Int_>(Int_&& r, size_t i) { counter.max[i + 1] = std::forward<Int_>(r); });
     return counter;
 }
-} // namespace kangsw
+} // namespace kangsw::inline counter

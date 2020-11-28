@@ -4,7 +4,7 @@
 #include <type_traits>
 #include "counter.hxx"
 
-namespace kangsw {
+namespace kangsw::inline iterations {
 
 /**
  * convenient helper method for for_reach_partition
@@ -22,19 +22,18 @@ void for_each_indexes(int64_t begin, int64_t end, Fn_&& cb) {
     std::for_each(range.begin(), range.end(), std::forward<Fn_>(cb));
 }
 
-namespace impl__ {
-enum class recurse_policy_base {
+enum class _recurse_policy_base {
     preorder,
     postorder,
 };
-template <impl__::recurse_policy_base Val_>
-using recurse_policy_v = std::integral_constant<impl__::recurse_policy_base, Val_>;
 
-} // namespace impl__
+template <_recurse_policy_base Val_>
+using recurse_policy_v = std::integral_constant<_recurse_policy_base, Val_>;
+
 
 namespace recurse {
-constexpr impl__::recurse_policy_v<impl__::recurse_policy_base::preorder> preorder;
-constexpr impl__::recurse_policy_v<impl__::recurse_policy_base::postorder> postorder;
+constexpr recurse_policy_v<_recurse_policy_base::preorder> preorder;
+constexpr recurse_policy_v<_recurse_policy_base::postorder> postorder;
 } // namespace recurse
 
 /**
@@ -45,11 +44,11 @@ constexpr impl__::recurse_policy_v<impl__::recurse_policy_base::postorder> posto
  */
 template <
   typename Ref_, typename Recurse_,
-  impl__::recurse_policy_base Policy_ = impl__::recurse_policy_base::preorder>
+  _recurse_policy_base Policy_ = _recurse_policy_base::preorder>
 decltype(auto) recurse_for_each(
   Ref_ root, Recurse_&& recurse,
-  std::integral_constant<impl__::recurse_policy_base, Policy_> = {}) {
-    if constexpr (Policy_ == impl__::recurse_policy_base::preorder) {
+  std::integral_constant<_recurse_policy_base, Policy_> = {}) {
+    if constexpr (Policy_ == _recurse_policy_base::preorder) {
         std::vector<std::pair<Ref_, size_t>> stack;
         stack.emplace_back(root, 0);
 
@@ -68,7 +67,7 @@ decltype(auto) recurse_for_each(
             }
         }
     }
-    else if constexpr (Policy_ == impl__::recurse_policy_base::postorder) {
+    else if constexpr (Policy_ == _recurse_policy_base::postorder) {
         static_assert(false); // do it later
     }
     else {
@@ -109,4 +108,4 @@ void for_each_partition(ExPo_&&, It_ first, It_ last, Fn_&& cb, size_t num_parti
       });
 }
 
-} // namespace kangsw
+} // namespace kangsw::inline for_each

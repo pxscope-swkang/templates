@@ -11,7 +11,7 @@
 #include <string_view>
 #include <system_error>
 #include <unordered_map>
-#include "misc.hxx"
+#include "trivial.hxx"
 
 namespace kangsw {
 class safe_string_table;
@@ -19,20 +19,20 @@ class safe_string_table;
 struct hash_index {
 public:
     constexpr hash_index(std::string_view str) noexcept :
-        hash_(impl__::fnv1a_impl(str.data(), str.data() + str.size())) {}
-
+        hash_(_fnv1a_impl(str.data(), str.data() + str.size())) {}
+    
     constexpr hash_index(std::string const& str) noexcept :
-        hash_(impl__::fnv1a_impl(str.data(), str.data() + str.size())) {}
+        hash_(_fnv1a_impl(str.data(), str.data() + str.size())) {}
 
     template <size_t N>
     constexpr hash_index(char const (&str)[N]) noexcept :
-        hash_(impl__::fnv1a_impl(str, str + N)) {}
+        hash_(_fnv1a_impl(str, str + N)) {}
 
     constexpr hash_index(char const* str) noexcept :
         hash_(fnv1a(str)) {}
 
     constexpr hash_index(char const* str, size_t N) noexcept :
-        hash_(impl__::fnv1a_impl(str, str + N)) {}
+        hash_(_fnv1a_impl(str, str + N)) {}
 
     constexpr hash_index(size_t value = -1) noexcept :
         hash_(value) {}

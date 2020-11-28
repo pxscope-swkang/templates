@@ -1,7 +1,7 @@
 #pragma once
 #include <atomic>
 
-namespace kangsw {
+namespace kangsw::inline threads {
 
 template <typename Ty_,
           std::memory_order ImplicitStorePolicy_ = std::memory_order_seq_cst,
@@ -28,4 +28,4 @@ public:
     atomic_cloneable(atomic_cloneable&& r) = delete;
 };
 
-} // namespace kangsw
+} // namespace kangsw::inline threads

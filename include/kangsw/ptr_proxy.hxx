@@ -1,7 +1,7 @@
 #pragma once
 #include <utility>
 
-namespace kangsw {
+namespace kangsw:: inline misc {
 
 template <typename Ty_>
 class ptr_proxy {

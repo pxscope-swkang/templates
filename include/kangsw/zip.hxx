@@ -23,8 +23,8 @@
     }
  * @endcode 
  */
-namespace kangsw {
-namespace impl__ {
+namespace kangsw:: inline zipper {
+namespace _zip_impl {
 template <typename... Args_>
 class _zip_iterator {
 public:
@@ -112,7 +112,7 @@ decltype(auto) zip(Containers_&&... containers) {
     auto begin = std::make_tuple(std::begin(containers)...);
     auto end = std::make_tuple(std::end(containers)...);
 
-    impl__::_zip_range<decltype(std::begin(containers))...> zips;
+    _zip_impl::_zip_range<decltype(std::begin(containers))...> zips;
     zips.begin_ = begin;
     zips.end_ = end;
     return zips;

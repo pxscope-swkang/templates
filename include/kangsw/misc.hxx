@@ -30,6 +30,7 @@ std::string format(char const* fmt, Args_&&... args) {
     return s;
 }
 
+inline namespace iterations {
 /**
  * Executes for_each with given parallel execution policy. However, it provides current partition index within given callback.
  * It is recommended to set num_partitions as same as current thread count.
@@ -49,4 +50,5 @@ void for_each_threads(Range_&& range, Fn_&& cb) {
     for_each_threads(std::begin(range), std::end(range), std::forward<Fn_>(cb));
 }
 
+} // namespace for_each
 } // namespace kangsw

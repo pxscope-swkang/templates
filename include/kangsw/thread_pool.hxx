@@ -17,7 +17,7 @@
 #include <type_traits>
 #include "atomic_queue.hxx"
 
-namespace kangsw {
+namespace kangsw:: inline threads {
 class thread_pool_exception : public std::exception {
 public:
     explicit thread_pool_exception(char const* _Message)

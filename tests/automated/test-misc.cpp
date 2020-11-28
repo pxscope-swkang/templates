@@ -8,6 +8,7 @@
  */
 #include <algorithm>
 
+#define CATCH_CONFIG_ENABLE_BENCHMARKING
 #include "catch.hpp"
 #include "kangsw/hash_index.hxx"
 #include "kangsw/infix.hxx"
@@ -162,7 +163,7 @@ TEST_CASE("ownership") {
 }
 
 TEST_CASE("n-dim counter") {
-    constexpr size_t I = 15, J = 55, K = 66;
+    constexpr size_t I = 15, J = 100, K = 100;
     bool set[I][J][K] = {};
 
     for (auto& index : counter(I, J, K)) {
@@ -177,6 +178,27 @@ TEST_CASE("n-dim counter") {
             }
         }
     }
+
+    volatile int k = 0;
+    int g = 0;
+    BENCHMARK("3D Counter bench") {
+        k = 0;
+        for (auto & c : counter(I, J, K)) {
+            k = g++;
+        }
+    };
+
+    BENCHMARK("1D Counter bench") {
+        for (auto v : counter(I * J * K)) {
+            k = g++;
+        }
+    };
+
+    BENCHMARK("Simple Loop") {
+        for (auto i = 0; i < I * J * K; ++i) {
+            k = g++;
+        }
+    };
 
     REQUIRE(successful);
 }

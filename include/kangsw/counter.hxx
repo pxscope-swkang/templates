@@ -171,7 +171,7 @@ public:
     auto& operator[](size_t dim) { return current[dim]; }
 
     template <size_t N_ = Dim_ - 1>
-    void incr() {
+    inline void incr() {
         if constexpr (N_ == size_t(-1)) {
             current = max;
         }

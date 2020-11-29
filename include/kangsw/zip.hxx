@@ -9,6 +9,7 @@
 #pragma once
 #include <stdexcept>
 #include <tuple>
+#include "details/tuple_for_each.hxx"
 
 /**
  * Zip functionality
@@ -23,21 +24,23 @@
     }
  * @endcode 
  */
-namespace kangsw:: inline zipper {
+namespace kangsw::inline zipper {
 namespace _zip_impl {
+
 template <typename... Args_>
 class _zip_iterator {
 public:
     using tuple_type = std::tuple<Args_...>;
-    using iterator_category = std::forward_iterator_tag;
-    using value_type = std::tuple<decltype(*Args_{})...>;
-    using reference = value_type&;
+    using iterator_category = std::random_access_iterator_tag;
+    using value_type = std::tuple<std::remove_reference_t<decltype(*Args_{})>...>;
+    using difference_type = ptrdiff_t;
+    using reference = std::tuple<decltype(*Args_{})...>;
     using pointer = value_type*;
 
 private:
     template <size_t... N_>
-    value_type _deref(std::index_sequence<N_...>) const {
-        return std::make_tuple(std::ref(*std::get<N_>(pack_))...);
+    reference _deref(std::index_sequence<N_...>) const {
+        return std::forward_as_tuple(*std::get<N_>(pack_)...);
     }
 
     template <size_t N_ = 0>
@@ -62,8 +65,7 @@ public:
     bool operator!=(_zip_iterator const& op) const { return !(*this == op); }
 
     _zip_iterator& operator++() {
-        std::apply([](auto&&... arg) { (++arg, ...); }, pack_);
-        return *this;
+        return std::apply([](auto&&... arg) { (++arg, ...); }, pack_), *this;
     }
 
     _zip_iterator operator++(int) {
@@ -71,9 +73,38 @@ public:
         return ++*this, copy;
     }
 
-    value_type operator*() const {
+    _zip_iterator& operator--() {
+        return std::apply([](auto&&... arg) { (--arg, ...); }, pack_), *this;
+    }
+
+    _zip_iterator operator--(int) {
+        auto copy = *this;
+        return --*this, copy;
+    }
+
+    reference operator*() const {
         return _deref(std::make_index_sequence<sizeof...(Args_)>{});
     }
+
+    _zip_iterator& operator+=(difference_type n) {
+        return std::apply([n](auto&&... arg) { ((arg += n), ...); }, pack_), *this;
+    }
+    _zip_iterator& operator-=(difference_type n) {
+        return std::apply([n](auto&&... arg) { ((arg -= n), ...); }, pack_), *this;
+    }
+
+    friend _zip_iterator operator+(_zip_iterator c, difference_type n) { return c += n; }
+    friend _zip_iterator operator-(_zip_iterator c, difference_type n) { return c -= n; }
+
+    friend _zip_iterator operator+(difference_type n, _zip_iterator c) { return c + n; }
+    friend _zip_iterator operator-(difference_type n, _zip_iterator c) { return c - n; }
+
+    difference_type operator-(_zip_iterator o) const { return std::get<0>(pack_) - std::get<0>(o.pack_); }
+
+    bool operator<(_zip_iterator o) const { return std::get<0>(pack_) < std::get<0>(o.pack_); }
+    bool operator>(_zip_iterator o) const { return o < *this; }
+
+    reference operator[](difference_type n) const { return *(*this + n); }
 
 public:
     tuple_type pack_;
@@ -99,7 +130,7 @@ decltype(auto) _container_size(Ty_&& container, Ph_...) {
     return std::size(container);
 }
 
-} // namespace impl__
+} // namespace _zip_impl
 
 template <typename Ty_>
 decltype(auto) il(std::initializer_list<Ty_> v) { return v; }
@@ -118,4 +149,14 @@ decltype(auto) zip(Containers_&&... containers) {
     return zips;
 }
 
-} // namespace kangsw
+} // namespace kangsw::inline zipper
+
+// tuple overload to receive swap ...
+namespace std {
+template <typename... Args_> requires(is_reference_v<Args_>&&...)         //
+  void swap(std::tuple<Args_...> const& a, std::tuple<Args_...> const& b) //
+{
+    using tup_t = std::tuple<Args_...>;
+    ((tup_t&)a).swap((tup_t&)b);
+}
+} // namespace std

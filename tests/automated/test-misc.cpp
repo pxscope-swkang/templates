@@ -75,18 +75,52 @@ TEST_CASE("infix feature test", "[custom_infix]") {
 namespace sk = kangsw;
 
 TEST_CASE("packed tuple test") {
-    auto a = {1, 1, 2};
-    auto b = {2, 3, 3};
-    auto sum = {3, 4, 5};
+    int a[] = {1, 2, 4};
+    int b[] = {2, 3, 6};
+    auto sum = {3, 5, 10};
     auto tup = zip(a, b, sum);
 
     for (auto [_0, _1, _2] : tup) {
         REQUIRE((_0 + _1) == _2);
     }
 
-    zip(il({1, 2, 3}));
+    auto zipped = zip(a, b);
+    zipped.begin()[0] = zipped.begin()[1];
+    auto zb = zipped.begin();
+    CHECK(a[0] == 2);
+    CHECK(b[0] == 3);
+
+    std::swap(zb[2], zb[1]);
+    CHECK(a[1] == 4);
+    CHECK(b[1] == 6);
+    CHECK(a[2] == 2);
+    CHECK(b[2] == 3);
+
     auto c = {1, 3, 4, 5};
     REQUIRE_THROWS(([&]() { for(auto i : zip(a, b, c)){}; }()));
+
+    int indexes[10], indexes_src[10];
+    std::iota(std::begin(indexes), std::end(indexes), 0);
+    std::iota(std::begin(indexes_src), std::end(indexes_src), 0);
+    std::sort(std::begin(indexes), std::end(indexes));
+
+    int comparand[10] = {4, 3, 2, 6, 7, 9, 0, 1, 5, 8};
+    int pivot[10] = {6, 7, 2, 1, 0, 8, 3, 4, 9, 5};
+
+    auto sorten = zip(indexes, comparand);
+
+    std::sort(sorten.begin(), sorten.end());
+
+    CHECK(std::memcmp(indexes, indexes_src, sizeof indexes) == 0);
+    std::sort(sorten.begin(), sorten.end(), [&](auto&& A, auto&& B) {
+        return std::get<1>(A) < std::get<1>(B);
+    });
+
+    CHECK(std::memcmp(indexes, pivot, sizeof indexes) == 0);
+
+    std::tuple<int> cfg{3};
+    std::tuple<int&> ff{a[0]};
+    cfg = ff;
 }
 
 TEST_CASE("constexpr hashing") {
@@ -171,9 +205,9 @@ TEST_CASE("n-dim counter") {
     }
 
     bool successful = true;
-    for (auto& i : iota{I}) {
-        for (auto& j : iota{J}) {
-            for (auto& k : iota{K}) {
+    for (auto i : iota{I}) {
+        for (auto j : iota{J}) {
+            for (auto k : iota{K}) {
                 successful = successful && set[i][j][k];
             }
         }
@@ -181,24 +215,24 @@ TEST_CASE("n-dim counter") {
 
     volatile int k = 0;
     int g = 0;
-    BENCHMARK("3D Counter bench") {
-        k = 0;
-        for (auto & c : counter(I, J, K)) {
-            k = g++;
-        }
-    };
+    //BENCHMARK("3D Counter bench") {
+    //    k = 0;
+    //    for (auto& c : counter(I, J, K)) {
+    //        k = g++;
+    //    }
+    //};
 
-    BENCHMARK("1D Counter bench") {
-        for (auto v : counter(I * J * K)) {
-            k = g++;
-        }
-    };
+    //BENCHMARK("1D Counter bench") {
+    //    for (auto v : counter(I * J * K)) {
+    //        k = g++;
+    //    }
+    //};
 
-    BENCHMARK("Simple Loop") {
-        for (auto i = 0; i < I * J * K; ++i) {
-            k = g++;
-        }
-    };
+    //BENCHMARK("Simple Loop") {
+    //    for (auto i = 0; i < I * J * K; ++i) {
+    //        k = g++;
+    //    }
+    //};
 
     REQUIRE(successful);
 }

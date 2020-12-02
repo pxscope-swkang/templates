@@ -100,7 +100,7 @@ constexpr size_t countof(Ty_ (&)[N]) { return N; }
  */
 template <typename Container_>
 void swap_remove(Container_& ct, typename Container_::size_type at) {
-    if (at < ct.size()) { std::swap(ct[at], ct.back()); }
+    if (at + 1 < ct.size()) { std::swap(ct[at], ct.back()); }
     ct.pop_back();
 }
 

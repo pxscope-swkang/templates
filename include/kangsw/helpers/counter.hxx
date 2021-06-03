@@ -2,7 +2,7 @@
 #include <array>
 #include <iterator>
 #include <numeric>
-#include "details/tuple_for_each.hxx"
+#include "tuple_for_each.hxx"
 
 namespace kangsw::inline counters {
 
@@ -246,7 +246,7 @@ template <typename SizeTy_, typename... Ints_>
 constexpr auto counter(SizeTy_ size, Ints_... args) {
     constexpr auto n_dim = sizeof...(Ints_) + 1;
     using size_type = std::decay_t<SizeTy_>;
-    _count_index<size_type, n_dim> counter;
+    _count_index<size_type, n_dim> counter{};
     counter.max[0] = std::forward<SizeTy_>(size);
     tuple_for_each(
       std::forward_as_tuple(std::forward<Ints_>(args)...),
@@ -256,7 +256,7 @@ constexpr auto counter(SizeTy_ size, Ints_... args) {
 
 template <typename SizeTy_, size_t Dim_>
 constexpr auto counter(std::array<SizeTy_, Dim_> const& idx) {
-    _count_index<SizeTy_, Dim_> counter;
+    _count_index<SizeTy_, Dim_> counter{};
     for (size_t i = 0; i < Dim_; ++i) { counter.max[i] = idx[i]; }
     return counter;
 }

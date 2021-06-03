@@ -2,7 +2,7 @@
 #include <array>
 #include <numeric>
 #include <vector>
-#include "zip.hxx"
+#include "kangsw/helpers/zip.hxx"
 
 namespace kangsw::inline containers {
 /**

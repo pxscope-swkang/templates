@@ -9,8 +9,8 @@
 #include <array>
 #include <iomanip>
 #include <iostream>
-#include <kangsw/misc.hxx>
-#include <kangsw/thread_pool.hxx>
+#include <kangsw/helpers/misc.hxx>
+#include <kangsw/thread/thread_pool.hxx>
 #define CATCH_CONFIG_ENABLE_BENCHMARKING
 #include "catch.hpp"
 

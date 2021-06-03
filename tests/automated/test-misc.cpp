@@ -10,9 +10,9 @@
 
 #define CATCH_CONFIG_ENABLE_BENCHMARKING
 #include "catch.hpp"
-#include "kangsw/hash_index.hxx"
-#include "kangsw/infix.hxx"
-#include "kangsw/misc.hxx"
+#include "kangsw/helpers/hash_index.hxx"
+#include "kangsw/helpers/infix.hxx"
+#include "kangsw/helpers/misc.hxx"
 
 namespace kangsw::misc_test {
 

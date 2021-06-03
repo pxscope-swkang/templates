@@ -8,6 +8,7 @@ template <typename Ty_,
           std::memory_order ImplicitLoadPolicy_ = std::memory_order_relaxed>
 class atomic_cloneable : public std::atomic<Ty_> {
     using super = std::atomic<Ty_>;
+    using super::super;
 
 public:
     static constexpr std::memory_order implicit_load_policy = ImplicitLoadPolicy_;

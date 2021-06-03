@@ -10,8 +10,8 @@
 #include <thread>
 #define CATCH_CONFIG_ENABLE_BENCHMARKING
 #include "catch.hpp"
-#include "kangsw/atomic_queue.hxx"
-#include "kangsw/misc.hxx"
+#include "kangsw/thread/atomic_queue.hxx"
+#include "kangsw/helpers/misc.hxx"
 
 namespace kangsw::container_test::queue {
 TEST_CASE("Queue basic operations", "[lock_free_queue]") {

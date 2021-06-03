@@ -1,7 +1,7 @@
 #define CATCH_CONFIG_ENABLE_BENCHMARKING
 #include "catch.hpp"
-#include "kangsw/counter.hxx"
-#include "kangsw/ndarray.hxx"
+#include "kangsw/helpers/counter.hxx"
+#include "kangsw/container/ndarray.hxx"
 
 namespace kangsw::container_test {
 TEST_CASE("ndarray") {
@@ -14,7 +14,7 @@ TEST_CASE("ndarray") {
     REQUIRE_THROWS(ndr.at(24, 34, 3));
 
     auto dim = ndr.dims();
-    for (auto idx : counter(dim[0], dim[1], dim[2])) {
+    for (auto& idx : counter(dim[0], dim[1], dim[2])) {
         ndr[idx] += 1;
     }
 

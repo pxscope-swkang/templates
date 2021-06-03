@@ -41,13 +41,32 @@ public:
     }
 
 public:
-    constexpr friend _counter operator+(_counter c, difference_type n) { return _counter(c.count_ + n); }
-    constexpr friend _counter operator+(difference_type n, _counter c) { return c + n; }
+    template <typename Integer_>
+    requires std::is_integral_v<Integer_>
+    constexpr friend _counter operator+(_counter c, Integer_ n) { return _counter(c.count_ + n); }
+
+    template <typename Integer_>
+    requires std::is_integral_v<Integer_>
+    constexpr friend _counter operator+(Integer_ n, _counter c) { return c + n; }
+
+    template <typename Integer_>
+    requires std::is_integral_v<Integer_>
     constexpr friend _counter operator-(_counter c, difference_type n) { return _counter(c.count_ - n); }
-    constexpr friend _counter operator-(difference_type n, _counter c) { return c - n; }
+
+    template <typename Integer_>
+    requires std::is_integral_v<Integer_>
+    constexpr friend _counter operator-(Integer_ n, _counter c) { return c - n; }
+
     constexpr difference_type operator-(_counter o) const { return count_ - o.count_; }
-    constexpr _counter& operator+=(difference_type n) { return count_ += n, *this; }
-    constexpr _counter& operator-=(difference_type n) { return count_ -= n, *this; }
+
+    template <typename Integer_>
+    requires std::is_integral_v<Integer_>
+    constexpr _counter& operator+=(Integer_ n) { return count_ += n, *this; }
+   
+    template <typename Integer_>
+    requires std::is_integral_v<Integer_>
+    constexpr _counter& operator-=(Integer_ n) { return count_ -= n, *this; }
+    
     constexpr _counter& operator++() { return ++count_, *this; }
     constexpr _counter operator++(int) { return ++count_, _counter(count_ - 1); }
     constexpr _counter& operator--() { return --count_, *this; }

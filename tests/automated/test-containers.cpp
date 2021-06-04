@@ -1,7 +1,7 @@
 #define CATCH_CONFIG_ENABLE_BENCHMARKING
 #include "catch.hpp"
-#include "kangsw/helpers/counter.hxx"
 #include "kangsw/container/ndarray.hxx"
+#include "kangsw/helpers/counter.hxx"
 
 namespace kangsw::container_test {
 TEST_CASE("ndarray") {

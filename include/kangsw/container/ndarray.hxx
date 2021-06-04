@@ -41,25 +41,11 @@ private:
         return index + r.back();
     }
 
-public:
-    template <typename... Ints_>
-    requires((sizeof...(Ints_) == dimension) && (std::is_integral_v<Ints_> && ...))
-      ndarray(Ints_... ints) {
-        if constexpr (sizeof...(Ints_)) { reshape(ints...); }
-    }
-
-    ndarray() = default;
-
-public:
-    template <typename... Values_> requires((sizeof...(Values_) == dimension) && (std::is_integral_v<Values_> && ...)) //
-      void reshape(Values_... values) {
-        static_assert(sizeof...(values) == dimension);
-        auto value = {size_type(values)...};
-        std::copy(value.begin(), value.end(), dim_.begin());
+    auto _apply_reshape() {
         data_.resize(std::reduce(dim_.begin(), dim_.end(), size_type(1), std::multiplies<>{}));
 
-        auto it_dim = value.end() - 1;
-        auto it_dim_end = value.begin();
+        auto it_dim = dim_.end() - 1;
+        auto it_dim_end = dim_.begin();
         auto it_step = steps_.end() - 1;
 
         for (size_t step = 1;; --it_step) {
@@ -68,6 +54,35 @@ public:
 
             if (--it_dim == it_dim_end) { break; }
         }
+    }
+
+public:
+    template <typename... Ints_>
+    requires((sizeof...(Ints_) == dimension) && (std::is_integral_v<Ints_> && ...))
+      ndarray(Ints_... ints) {
+        if constexpr (sizeof...(Ints_)) { reshape(ints...); }
+    }
+
+    ndarray() noexcept = default;
+    ndarray(ndarray const&) noexcept = default;
+    ndarray(ndarray&&) noexcept = default;
+    ndarray& operator=(ndarray&&) noexcept = default;
+    ndarray& operator=(ndarray const&) noexcept = default;
+
+public:
+    template <typename... Values_>
+    requires((sizeof...(Values_) == dimension) && (std::is_integral_v<Values_> && ...)) //
+      void reshape(Values_... values) {
+        static_assert(sizeof...(values) == dimension);
+        auto value = {size_type(values)...};
+        std::copy(value.begin(), value.end(), dim_.begin());
+
+        _apply_reshape();
+    }
+
+    void reshape(dimension_type const& new_dims) {
+        dim_ = new_dims;
+        _apply_reshape();
     }
 
     template <typename... Idxs_> //
@@ -106,11 +121,18 @@ public:
 
     auto size() const { return data_.size(); }
     auto dims() const { return dim_; }
-    auto resrve() { data_.reserve(); }
     auto shrink_to_fit() { data_.shrink_to_fit(); }
 
     auto data() const { return data_.data(); }
     auto data() { return data_.data(); }
+
+    template <typename It_>
+    void assign(It_ first, It_ last) {
+        if (std::distance(first, last) != size()) { throw std::logic_error{"Assignment size mismatch"}; }
+        data_.assign(first, last);
+    }
+
+    void assign(std::initializer_list<value_type> values) { assign(values.begin(), values.end()); }
 
     bool operator==(ndarray const& r) const { return dim_ == r.dim_ && data_ == r.data_; }
     bool operator!=(ndarray const& r) const { return !(*this == r); }

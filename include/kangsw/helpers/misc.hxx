@@ -13,10 +13,10 @@
 #include <optional>
 #include <string>
 #include <thread>
-#include "counter.hxx"
-#include "for_each.hxx"
-#include "trivial.hxx"
-#include "zip.hxx"
+#include "kangsw/helpers/counter.hxx"
+#include "kangsw/helpers/for_each.hxx"
+#include "kangsw/helpers/trivial.hxx"
+#include "kangsw/helpers/zip.hxx"
 
 namespace kangsw {
 

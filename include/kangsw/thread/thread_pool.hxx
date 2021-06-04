@@ -15,7 +15,7 @@
 #include <shared_mutex>
 #include <thread>
 #include <type_traits>
-#include "atomic_queue.hxx"
+#include "kangsw/thread/atomic_queue.hxx"
 
 namespace kangsw:: inline threads {
 class thread_pool_exception : public std::exception {

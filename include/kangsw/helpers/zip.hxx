@@ -9,7 +9,7 @@
 #pragma once
 #include <stdexcept>
 #include <tuple>
-#include "details/tuple_for_each.hxx"
+#include "tuple_for_each.hxx"
 
 /**
  * Zip functionality

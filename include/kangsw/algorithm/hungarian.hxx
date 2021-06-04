@@ -51,7 +51,7 @@ requires(std::is_integral_v<NumTy_> || std::is_floating_point_v<NumTy_>) //
         for (size_t row = 0; row < _len; ++row) { _row_zero(row); }
         for (size_t col = 0; col < _len; ++col) { _col_zero(col); }
 
-        while (!_has_optimal(is_zero)) {
+        while (!_is_optimal(is_zero)) {
             _step1();
         }
 
@@ -69,8 +69,11 @@ requires(std::is_integral_v<NumTy_> || std::is_floating_point_v<NumTy_>) //
     }
 
 private:
-    enum class line_t { row,
-                      col };
+    enum class line_t {
+        none,
+        row,
+        col
+    };
 
     auto _row_subtr(size_t row, NumTy_ val) {
         for (size_t i = 0; i < _len; i++) { _distances(row, i) -= val; }
@@ -107,7 +110,7 @@ private:
 
     // optimal check
     // check if we can erase all zeros GE than 'len' lines
-    bool _has_optimal(IsZero_& is_zero) {
+    bool _is_optimal(IsZero_& is_zero) {
         // fill zeros
         for (auto& idx : counter(_distances.dims())) {
             _zeros[idx] = is_zero(_distances[idx]);

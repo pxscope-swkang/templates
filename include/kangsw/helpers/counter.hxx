@@ -62,11 +62,11 @@ public:
     template <typename Integer_>
     requires std::is_integral_v<Integer_>
     constexpr _counter& operator+=(Integer_ n) { return count_ += n, *this; }
-   
+
     template <typename Integer_>
     requires std::is_integral_v<Integer_>
     constexpr _counter& operator-=(Integer_ n) { return count_ -= n, *this; }
-    
+
     constexpr _counter& operator++() { return ++count_, *this; }
     constexpr _counter operator++(int) { return ++count_, _counter(count_ - 1); }
     constexpr _counter& operator--() { return --count_, *this; }
@@ -276,7 +276,13 @@ constexpr auto counter(SizeTy_ size, Ints_... args) {
 template <typename SizeTy_, size_t Dim_>
 constexpr auto counter(std::array<SizeTy_, Dim_> const& idx) {
     _count_index<SizeTy_, Dim_> counter{};
-    for (size_t i = 0; i < Dim_; ++i) { counter.max[i] = idx[i]; }
+    bool has_zero = false;
+    for (size_t i = 0; i < Dim_; ++i) {
+        counter.max[i] = idx[i];
+        has_zero = has_zero || idx[i] == 0;
+    }
+
+    counter.max[0] *= !has_zero;
     return counter;
 }
 

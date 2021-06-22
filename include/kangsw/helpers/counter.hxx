@@ -217,8 +217,8 @@ public:
     constexpr bool operator==(_counter const& o) const { return current == o.current; }
     constexpr bool operator!=(_counter const& o) const { return !(*this == o); }
 
-    constexpr bool operator==(_counter_end_marker_t) const { return current[0] == max[0]; }
-    constexpr bool operator!=(_counter_end_marker_t) const { return current[0] != max[0]; }
+    // constexpr bool operator==(_counter_end_marker_t) const { return current[0] == max[0]; }
+    // constexpr bool operator!=(_counter_end_marker_t) const { return current[0] != max[0]; }
 
     constexpr auto& operator*() const { return current; }
     constexpr auto operator->() const { return &current; }
@@ -236,7 +236,7 @@ struct _count_index {
     using dimension = typename iterator::dimension;
     constexpr iterator begin() const { return _counter<SizeTy_, Dim_>{max, {}}; }
     // constexpr iterator end() const { return _counter<SizeTy_, Dim_>{max, max}; }
-    constexpr _counter_end_marker_t end() const { return {}; }
+    constexpr iterator end() const { return _counter<SizeTy_, Dim_>{max, max}; }
 
     dimension max;
 };

@@ -12,7 +12,9 @@ namespace kangsw::inline containers {
 template <typename Ty_, size_t Dim_ = 1>
 class ndarray {
 public:
-    using value_type = Ty_;
+    using value_type = typename std::vector<Ty_>::value_type;
+    using reference = typename std::vector<Ty_>::reference;
+    using const_reference = typename std::vector<Ty_>::const_reference;
     using size_type = size_t;
     using dimension_type = std::array<size_type, Dim_>;
     enum : size_t { dimension = Dim_ };
@@ -86,33 +88,34 @@ public:
     }
 
     template <typename... Idxs_> //
-    requires((sizeof...(Idxs_) == dimension) && (std::is_integral_v<Idxs_> && ...)) auto&
-    operator()(Idxs_... index) {
+    requires((sizeof...(Idxs_) == dimension) && (std::is_integral_v<Idxs_> && ...))
+    reference operator()(Idxs_... index) {
         return data_[_reduce_index<0>(index...)];
     }
 
     template <typename... Idxs_>
-    requires((sizeof...(Idxs_) == dimension) && (std::is_integral_v<Idxs_> && ...)) auto&
-    operator()(Idxs_... index) const {
+    requires((sizeof...(Idxs_) == dimension) && (std::is_integral_v<Idxs_> && ...))
+      const_reference operator()(Idxs_... index) const {
         return data_[_reduce_index<0>(index...)];
     }
 
     template <typename... Idxs_>
-    requires((sizeof...(Idxs_) == dimension) && (std::is_integral_v<Idxs_> && ...)) auto& //
-      at(Idxs_... index) {
+    requires((sizeof...(Idxs_) == dimension) && (std::is_integral_v<Idxs_> && ...))
+      reference at(Idxs_... index) {
         return data_[_reduce_index<0, true>(index...)];
     }
 
     template <typename... Idxs_>
-    requires((sizeof...(Idxs_) == dimension) && (std::is_integral_v<Idxs_> && ...)) auto& //
-      at(Idxs_... index) const {
+    requires((sizeof...(Idxs_) == dimension) && (std::is_integral_v<Idxs_> && ...))
+      const_reference at(Idxs_... index)
+    const {
         return data_[_reduce_index<0, true>(index...)];
     }
 
-    auto& at(dimension_type const& i) const { return data_.at(_get_index(i)); }
-    auto& at(dimension_type const& i) { return data_.at(_get_index(i)); }
-    auto& operator[](dimension_type const& i) const { return data_[_get_index(i)]; }
-    auto& operator[](dimension_type const& i) { return data_[_get_index(i)]; }
+    const_reference at(dimension_type const& i) const { return data_.at(_get_index(i)); }
+    reference at(dimension_type const& i) { return data_.at(_get_index(i)); }
+    const_reference operator[](dimension_type const& i) const { return data_[_get_index(i)]; }
+    reference operator[](dimension_type const& i) { return data_[_get_index(i)]; }
 
     auto begin() { return data_.begin(); }
     auto cbegin() const { return data_.cbegin(); }

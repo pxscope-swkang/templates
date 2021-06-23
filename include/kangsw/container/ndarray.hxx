@@ -89,13 +89,15 @@ public:
 
     template <typename... Idxs_> //
     requires((sizeof...(Idxs_) == dimension) && (std::is_integral_v<Idxs_> && ...))
-    reference operator()(Idxs_... index) {
+      reference
+      operator()(Idxs_... index) {
         return data_[_reduce_index<0>(index...)];
     }
 
     template <typename... Idxs_>
     requires((sizeof...(Idxs_) == dimension) && (std::is_integral_v<Idxs_> && ...))
-      const_reference operator()(Idxs_... index) const {
+      const_reference
+      operator()(Idxs_... index) const {
         return data_[_reduce_index<0>(index...)];
     }
 
@@ -128,6 +130,9 @@ public:
 
     auto data() const { return data_.data(); }
     auto data() { return data_.data(); }
+
+    auto& vector() { return data_; }
+    auto& vector() const { return data_; }
 
     template <typename It_>
     void assign(It_ first, It_ last) {

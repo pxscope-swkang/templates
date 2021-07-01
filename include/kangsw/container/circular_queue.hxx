@@ -77,29 +77,35 @@ public:
         _capacity(capacity + 1), _data(capacity ? std::make_unique<chunk_t[]>(_capacity) : nullptr) {}
     circular_queue(const circular_queue& op) noexcept { *this = op; }
     circular_queue(circular_queue&& op) noexcept = default;
-    circular_queue& operator=(circular_queue&& op) noexcept = default;
+    circular_queue& operator=(circular_queue&& op) noexcept {
+        std::swap(*this, op);
+        return *this;
+    }
 
     circular_queue& operator=(const circular_queue& op) noexcept {
+        clear();
+        _head = {};
+        _tail = {};
         _capacity = op._capacity;
-        _head = op._head;
-        _tail = op._tail;
+        _data = std::make_unique<chunk_t[]>(_capacity);
 
-        if (op._data) {
-            _data = std::make_unique<chunk_t[]>(_capacity);
-            std::copy(op.begin(), op.end(), begin());
-        }
-        else {
-            _data = nullptr;
-        }
-
+        std::copy(op.begin(), op.end(), begin());
         return *this;
     }
 
     void reserve_shrink(size_t new_cap) {
         if (new_cap == capacity()) { return; }
-        if (new_cap == 0) { _data.reset(), _capacity = 1; }
+        if (new_cap == 0) { clear(), _data.reset(), _capacity = 1; }
+        auto n_copy = std::min(size(), new_cap);
+
+        // move available objects
         circular_queue next{new_cap};
-        std::copy_n(begin(), std::min(size(), new_cap), next.begin());
+        std::move(begin(), begin() + n_copy, std::back_inserter(next));
+
+        // destroies unmoved objects
+        _tail = _jmp(_tail, n_copy);
+        clear(); 
+
         *this = std::move(next);
     }
 

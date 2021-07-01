@@ -53,22 +53,33 @@ TEST_CASE("ndarray") {
 }
 
 TEST_CASE("circular_queue") {
-    circular_queue<int> s{256};
+    circular_queue<int> s1{256};
+    auto s2 = s1;
+    circular_queue<int> s3{0};
+    auto stmp = s1;
+    s3 = stmp;
+    stmp = s1;
+    auto s4 = std::move(stmp);
 
-    for (auto i : counter(256)) { s.push(i); }
-    CHECK(s.is_full());
-    CHECK(s.size() == 256);
-    CHECK(s.capacity() == 256);
-    CHECK(s.empty() == false);
-    CHECK(s.peek() == 0);
-    CHECK(s.latest() == 255);
-    REQUIRE_THROWS(s.push(0));
+    auto ss = { &s1, &s2, &s3, &s4 };
+    for (auto& ps : ss) {
+        auto s = *ps;
 
-    auto cnt = counter(256);
-    CHECK(std::equal(cnt.begin(), cnt.end(), s.begin()));
+        for (auto i : counter(256)) { s.push(i); }
+        CHECK(s.is_full());
+        CHECK(s.size() == 256);
+        CHECK(s.capacity() == 256);
+        CHECK(s.empty() == false);
+        CHECK(s.peek() == 0);
+        CHECK(s.latest() == 255);
+        REQUIRE_THROWS(s.push(0));
 
-    std::sort(s.begin(), s.end(), [](auto a, auto b) { return b < a; });
-    auto cnt2 = rcounter(256);
-    CHECK(std::equal(cnt2.begin(), cnt2.end(), s.begin()));
+        auto cnt = counter(256);
+        CHECK(std::equal(cnt.begin(), cnt.end(), s.begin()));
+
+        std::sort(s.begin(), s.end(), [](auto a, auto b) { return b < a; });
+        auto cnt2 = rcounter(256);
+        CHECK(std::equal(cnt2.begin(), cnt2.end(), s.begin()));
+    }
 }
 } // namespace kangsw::container_test

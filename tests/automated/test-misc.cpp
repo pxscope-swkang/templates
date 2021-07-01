@@ -196,7 +196,7 @@ TEST_CASE("ownership") {
     REQUIRE(owner::callcnt_ == 1);
 }
 
-TEST_CASE("n-dim counter") {
+TEST_CASE("n-dim counter", "[.]") {
     constexpr size_t I = 150, J = 100, K = 100;
    static bool set[I][J][K] = {};
 

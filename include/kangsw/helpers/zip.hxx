@@ -111,7 +111,7 @@ public:
 };
 
 template <typename... Args_>
-class _zip_range {
+class _zip_range : public std::ranges::view_interface<_zip_range<Args_...>> {
 public:
     using tuple_type = std::tuple<Args_...>;
     using iterator = _zip_iterator<Args_...>;
@@ -136,7 +136,7 @@ template <typename Ty_>
 decltype(auto) il(std::initializer_list<Ty_> v) { return v; }
 
 /**
- * iterableÇÑ ÄÁÅ×ÀÌ³ÊµéÀ» ÇÏ³ª·Î ¹­½À´Ï´Ù.
+ * iterableí•œ ì»¨í…Œì´ë„ˆë“¤ì„ í•˜ë‚˜ë¡œ ë¬¶ìŠµë‹ˆë‹¤.
  */
 template <typename... Containers_>
 decltype(auto) zip(Containers_&&... containers) {
@@ -153,7 +153,8 @@ decltype(auto) zip(Containers_&&... containers) {
 
 // tuple overload to receive swap ...
 namespace std {
-template <typename... Args_> requires(is_reference_v<Args_>&&...)         //
+template <typename... Args_>
+requires(is_reference_v<Args_>&&...)                                      //
   void swap(std::tuple<Args_...> const& a, std::tuple<Args_...> const& b) //
 {
     using tup_t = std::tuple<Args_...>;

@@ -73,7 +73,7 @@ public:
     };
 
 public:
-    circular_queue(size_t capacity = 1024) noexcept :
+    circular_queue(size_t capacity) noexcept :
         _capacity(capacity + 1), _data(std::make_unique<chunk_t[]>(_capacity)) {}
     circular_queue(const circular_queue& op) noexcept { *this = op; }
     circular_queue(circular_queue&& op) noexcept = default;

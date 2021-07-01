@@ -139,10 +139,10 @@ public:
     constexpr size_t capacity() const { return _capacity - 1; }
     bool empty() const { return _head == _tail; }
 
-    Ty_& peek() { return _front(); }
-    Ty_ const& peek() const { return _front(); }
+    Ty_& front() { return _front(); }
+    Ty_ const& front() const { return _front(); }
 
-    Ty_& latest() { return _back(); }
+    Ty_& back() { return _back(); }
 
     bool is_full() const { return _next(_head) == _tail; }
 

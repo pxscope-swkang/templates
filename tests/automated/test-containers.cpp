@@ -70,8 +70,8 @@ TEST_CASE("circular_queue") {
         CHECK(s.size() == 256);
         CHECK(s.capacity() == 256);
         CHECK(s.empty() == false);
-        CHECK(s.peek() == 0);
-        CHECK(s.latest() == 255);
+        CHECK(s.front() == 0);
+        CHECK(s.back() == 255);
         REQUIRE_THROWS(s.push(0));
 
         auto cnt = counter(256);

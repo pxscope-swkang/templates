@@ -78,7 +78,10 @@ public:
     circular_queue(const circular_queue& op) noexcept { *this = op; }
     circular_queue(circular_queue&& op) noexcept = default;
     circular_queue& operator=(circular_queue&& op) noexcept {
-        std::swap(*this, op);
+        std::swap(_head, op._head);
+        std::swap(_tail, op._tail);
+        std::swap(_data, op._data);
+        std::swap(_capacity, op._capacity);
         return *this;
     }
 

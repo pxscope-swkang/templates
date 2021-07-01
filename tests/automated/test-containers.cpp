@@ -1,5 +1,8 @@
 #define CATCH_CONFIG_ENABLE_BENCHMARKING
+#include <ranges>
+
 #include "catch.hpp"
+#include "kangsw/container/circular_queue.hxx"
 #include "kangsw/container/ndarray.hxx"
 #include "kangsw/helpers/counter.hxx"
 
@@ -47,5 +50,25 @@ TEST_CASE("ndarray") {
     for (auto [target, gt] : zip(ndr, ff)) {
         CHECK(target == gt);
     }
+}
+
+TEST_CASE("circular_queue") {
+    circular_queue<int, 256> s;
+
+    for (auto i : counter(256)) { s.push(i); }
+    CHECK(s.is_full());
+    CHECK(s.size() == 256);
+    CHECK(s.capacity() == 256);
+    CHECK(s.empty() == false);
+    CHECK(s.peek() == 0);
+    CHECK(s.latest() == 255);
+    REQUIRE_THROWS(s.push(0));
+
+    auto cnt = counter(256);
+    CHECK(std::equal(cnt.begin(), cnt.end(), s.begin()));
+
+    std::sort(s.begin(), s.end(), [](auto a, auto b) { return b < a; });
+    auto cnt2 = rcounter(256);
+    CHECK(std::equal(cnt2.begin(), cnt2.end(), s.begin()));
 }
 } // namespace kangsw::container_test

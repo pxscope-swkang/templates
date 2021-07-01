@@ -74,7 +74,7 @@ public:
 
 public:
     circular_queue(size_t capacity) noexcept :
-        _capacity(capacity + 1), _data(std::make_unique<chunk_t[]>(_capacity)) {}
+        _capacity(capacity + 1), _data(capacity ? std::make_unique<chunk_t[]>(_capacity) : nullptr) {}
     circular_queue(const circular_queue& op) noexcept { *this = op; }
     circular_queue(circular_queue&& op) noexcept = default;
     circular_queue& operator=(circular_queue&& op) noexcept = default;
@@ -83,14 +83,21 @@ public:
         _capacity = op._capacity;
         _head = op._head;
         _tail = op._tail;
-        _data = std::make_unique<chunk_t[]>(_capacity);
 
-        std::copy(op.begin(), op.end(), begin());
+        if (op._data) {
+            _data = std::make_unique<chunk_t[]>(_capacity);
+            std::copy(op.begin(), op.end(), begin());
+        }
+        else {
+            _data = nullptr;
+        }
+
         return *this;
     }
 
     void reserve_shrink(size_t new_cap) {
         if (new_cap == capacity()) { return; }
+        if (new_cap == 0) { _data.reset(), _capacity = 1; }
         circular_queue next{new_cap};
         std::copy_n(begin(), std::min(size(), new_cap), next.begin());
         *this = std::move(next);

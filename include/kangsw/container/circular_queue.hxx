@@ -7,7 +7,7 @@ namespace kangsw {
  * 스레드에 매우 안전하지 않은 클래스입니다.
  * 별도의 스레드와 사용 시 반드시 락 필요
  */
-template <typename Ty_, size_t Cap_>
+template <typename Ty_>
 class circular_queue {
     using chunk_t = std::array<int8_t, sizeof(Ty_)>;
 
@@ -31,15 +31,15 @@ public:
         iterator(const iterator&) noexcept = default;
         iterator& operator=(const iterator&) noexcept = default;
 
-        auto& operator*() const { return _owner->_at(_head);  }
+        auto& operator*() const { return _owner->_at(_head); }
         auto operator->() const { return &*(*this); }
 
         bool operator==(iterator const& op) const noexcept { return _head == op._head; }
         bool operator<(iterator const& op) const noexcept { return _idx() < op._idx(); }
         bool operator<=(iterator const& op) const noexcept { return !(op < *this); }
 
-        auto& operator++() noexcept { return _head = _next(_head), *this; }
-        auto& operator--() noexcept { return _head = _prev(_head), *this; }
+        auto& operator++() noexcept { return _head = _owner->_next(_head), *this; }
+        auto& operator--() noexcept { return _head = _owner->_prev(_head), *this; }
 
         auto operator++(int) noexcept {
             auto c = *this;
@@ -50,8 +50,8 @@ public:
             return --*this, c;
         }
 
-        auto& operator-=(ptrdiff_t i) noexcept { return _head = _jmp(_head, -i), *this; }
-        auto& operator+=(ptrdiff_t i) noexcept { return _head = _jmp(_head, i), *this; }
+        auto& operator-=(ptrdiff_t i) noexcept { return _head = _owner->_jmp(_head, -i), *this; }
+        auto& operator+=(ptrdiff_t i) noexcept { return _head = _owner->_jmp(_head, i), *this; }
 
         auto operator-(iterator const& op) const noexcept { return static_cast<ptrdiff_t>(_idx() - op._idx()); }
 
@@ -73,6 +73,29 @@ public:
     };
 
 public:
+    circular_queue(size_t capacity = 1024) noexcept :
+        _capacity(capacity + 1), _data(std::make_unique<chunk_t[]>(_capacity)) {}
+    circular_queue(const circular_queue& op) noexcept { *this = op; }
+    circular_queue(circular_queue&& op) noexcept = default;
+    circular_queue& operator=(circular_queue&& op) noexcept = default;
+
+    circular_queue& operator=(const circular_queue& op) noexcept {
+        _capacity = op._capacity;
+        _head = op._head;
+        _tail = op._tail;
+        _data = std::make_unique<chunk_t[]>(_capacity);
+
+        std::copy(op.begin(), op.end(), begin());
+        return *this;
+    }
+
+    void reserve_shrink(size_t new_cap) {
+        if (new_cap == capacity()) { return; }
+        circular_queue next{new_cap};
+        std::copy_n(begin(), std::min(size(), new_cap), next.begin());
+        *this = std::move(next);
+    }
+
     void push(Ty_ const& s) { new (_data[_reserve()].data()) Ty_(s); }
     void push(Ty_&& s) { new (_data[_reserve()].data()) Ty_(std::move(s)); }
     void pop() { _release(); }
@@ -84,15 +107,15 @@ public:
         this->push(s);
     }
 
-    void push_rotate(Ty_ && s) {
+    void push_rotate(Ty_&& s) {
         if (is_full()) { pop(); }
         this->push(std::move(s));
     }
 
     size_t size() const {
-        return _head >= _tail ? _head - _tail : _head + (Cap_ + 1) - _tail;
+        return _head >= _tail ? _head - _tail : _head + _cap() - _tail;
     }
-    
+
     auto cbegin() const noexcept { return iterator<true>(this, _tail); }
     auto cend() const noexcept { return iterator<true>(this, _head); }
     auto begin() const noexcept { return cbegin(); }
@@ -100,7 +123,7 @@ public:
     auto begin() noexcept { return iterator<false>(this, _tail); }
     auto end() noexcept { return iterator<false>(this, _head); }
 
-    constexpr size_t capacity() const { return Cap_; }
+    constexpr size_t capacity() const { return _capacity - 1; }
     bool empty() const { return _head == _tail; }
 
     Ty_& peek() { return _front(); }
@@ -127,7 +150,7 @@ public:
     ~circular_queue() { clear(); }
 
 private:
-    constexpr static size_t _cap() { return Cap_ + 1; }
+    size_t _cap() const noexcept { return _capacity; }
 
     size_t _reserve() {
         if (is_full()) throw std::bad_array_new_length();
@@ -136,21 +159,20 @@ private:
         return retval;
     }
 
-    constexpr static size_t _next(size_t current) {
+    size_t _next(size_t current) const noexcept {
         return ++current == _cap() ? 0 : current;
     }
 
-    constexpr static size_t _prev(size_t current) {
+    size_t _prev(size_t current) const noexcept {
         return --current == ~size_t{} ? _cap() - 1 : current;
     }
 
-    constexpr static size_t _jmp(size_t at, ptrdiff_t jmp) {
+    size_t _jmp(size_t at, ptrdiff_t jmp) const noexcept {
         if (jmp >= 0) { return (at + jmp) % _cap(); }
         return at += jmp, at + _cap() * ((ptrdiff_t)at < 0);
     }
 
-    size_t _idx_linear(size_t i) const noexcept
-    {
+    size_t _idx_linear(size_t i) const noexcept {
         if (_head >= _tail) { return i; }
         return i - _tail * (i >= _tail) + (_cap() - _tail) * (i < _tail);
     }
@@ -177,7 +199,8 @@ private:
     }
 
 private:
-    std::array<chunk_t, Cap_ + 1> _data;
+    size_t _capacity;
+    std::unique_ptr<chunk_t[]> _data;
     size_t _head = {};
     size_t _tail = {};
 };

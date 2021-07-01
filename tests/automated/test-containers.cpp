@@ -53,7 +53,7 @@ TEST_CASE("ndarray") {
 }
 
 TEST_CASE("circular_queue") {
-    circular_queue<int, 256> s;
+    circular_queue<int> s{256};
 
     for (auto i : counter(256)) { s.push(i); }
     CHECK(s.is_full());

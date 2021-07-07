@@ -38,7 +38,7 @@ inline namespace iterations {
 template <typename It_, typename Fn_>
 void for_each_threads(It_ first, It_ last, Fn_&& cb) {
     auto num_partitions = std::thread::hardware_concurrency();
-    for_each_partition(std::execution::par_unseq, first, last, std::forward<Fn_>(cb), num_partitions);
+    for_each_partition(std::execution::par, first, last, std::forward<Fn_>(cb), num_partitions);
 }
 
 /**

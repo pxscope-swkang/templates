@@ -37,9 +37,9 @@ constexpr recurse_policy_v<_recurse_policy_base::postorder> postorder;
 } // namespace recurse
 
 /**
- * Àç±ÍÀûÀ¸·Î ÀÛ¾÷À» ¼öÇàÇÕ´Ï´Ù.
- * @param root ·çÆ®°¡ µÇ´Â ³ëµåÀÔ´Ï´Ù.
- * @param recurse Ty_·ÎºÎÅÍ ÇÏÀ§ ³ëµå¸¦ ÃßÃâÇÕ´Ï´Ù. void(Ty_& parent, void (emplacer)(Ty_&)) ½Ã±×´ÏÃÄ¸¦ °®´Â Äİ¹éÀ¸·Î, parentÀÇ ÀÚ¼Õ ³ëµå¸¦ iterateÇØ °¢°¢ÀÇ ³ëµå¿¡ ´ëÇØ emplacer(node)¸¦ È£ÃâÇÏ¿© Àç±ÍÀûÀÎ ÀÛ¾÷À» ¼öÇàÇÒ ¼ö ÀÖ½À´Ï´Ù.
+ * ì¬ê·€ì ìœ¼ë¡œ ì‘ì—…ì„ ìˆ˜í–‰í•©ë‹ˆë‹¤.
+ * @param root ë£¨íŠ¸ê°€ ë˜ëŠ” ë…¸ë“œì…ë‹ˆë‹¤.
+ * @param recurse Ty_ë¡œë¶€í„° í•˜ìœ„ ë…¸ë“œë¥¼ ì¶”ì¶œí•©ë‹ˆë‹¤. void(Ty_& parent, void (emplacer)(Ty_&)) ì‹œê·¸ë‹ˆì³ë¥¼ ê°–ëŠ” ì½œë°±ìœ¼ë¡œ, parentì˜ ìì† ë…¸ë“œë¥¼ iterateí•´ ê°ê°ì˜ ë…¸ë“œì— ëŒ€í•´ emplacer(node)ë¥¼ í˜¸ì¶œí•˜ì—¬ ì¬ê·€ì ì¸ ì‘ì—…ì„ ìˆ˜í–‰í•  ìˆ˜ ìˆìŠµë‹ˆë‹¤.
  * 
  */
 template <

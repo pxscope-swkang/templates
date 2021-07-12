@@ -14,7 +14,7 @@ constexpr bool is_constexpr(Lambda) { return true; }
 constexpr bool is_constexpr(...) { return false; }
 
 /**
- * parameter packÀÇ N¹øÂ° argument¸¦ ¾ò½À´Ï´Ù.
+ * parameter packì˜ Në²ˆì§¸ argumentë¥¼ ì–»ìŠµë‹ˆë‹¤.
  */
 template <size_t N, typename... Args>
 decltype(auto) get_pack_element(Args&&... as) noexcept {

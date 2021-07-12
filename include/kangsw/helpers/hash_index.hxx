@@ -90,7 +90,7 @@ struct std::hash<kangsw::hash_index> {
 
 namespace kangsw {
 /**
- * hash_index·ÎºÎÅÍ ÀÌ¸§À» ºôµåÇÏ±â À§ÇÑ ÇÔ¼ö¼º
+ * hash_indexë¡œë¶€í„° ì´ë¦„ì„ ë¹Œë“œí•˜ê¸° ìœ„í•œ í•¨ìˆ˜ì„±
  */
 class safe_string_table {
 public:

@@ -115,8 +115,8 @@ public:
     void push(Ty_ const& s) { new (_data[_reserve()].data()) Ty_(s); }
     void push(Ty_&& s) { new (_data[_reserve()].data()) Ty_(std::move(s)); }
     void pop() { _release(); }
-    void push_back(Ty_ const& s) { this->push(s); }
-    void push_back(Ty_&& s) { this->push(std::move(s)); }
+    void push_back(Ty_ const& s) { this->push_rotate(s); }
+    void push_back(Ty_&& s) { this->push_rotate(std::move(s)); }
 
     void push_rotate(Ty_ const& s) {
         if (is_full()) { pop(); }

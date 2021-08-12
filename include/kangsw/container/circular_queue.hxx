@@ -38,6 +38,8 @@ public:
         bool operator<(iterator const& op) const noexcept { return _idx() < op._idx(); }
         bool operator<=(iterator const& op) const noexcept { return !(op < *this); }
 
+        auto& operator[](difference_type idx) const noexcept { return *(*this + idx); }
+
         auto& operator++() noexcept { return _head = _owner->_next(_head), *this; }
         auto& operator--() noexcept { return _head = _owner->_prev(_head), *this; }
 
@@ -107,7 +109,7 @@ public:
 
         // destroies unmoved objects
         _tail = _jmp(_tail, n_copy);
-        clear(); 
+        clear();
 
         *this = std::move(next);
     }
